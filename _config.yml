@@ -1,0 +1,51 @@
+title: Ansible tutorial
+description: Ένα απλό εγχειρίδιο για την Ansible.
+
+theme: null
+
+google:
+  site_verification: 
+
+mouseflow:
+  project_api_key: 
+
+posthog:
+  project_api_key: 
+
+telemetry:
+  app_id: 
+
+umami:
+  website_id: 
+
+readme_index:
+  with_frontmatter: true
+
+plugins:
+  - jemoji
+  - jekyll-avatar
+  - jekyll-mentions
+  - jekyll-github-metadata
+  - jekyll-gist
+
+exclude:
+  - .bash
+  - .github
+  - .vscode
+  - .yarn
+  - CNAME
+  - Gemfile
+  - Gemfile.lock
+  - jekyll-theme-read-the-docs.gemspec
+  - LICENSE
+  - Makefile
+  - node_modules
+  - package-lock.json
+  - package.json
+  - Pipfile
+  - Pipfile.lock
+  - requirements.txt
+  - webpack.config.js
+  - yarn.lock
+  - initial-content
+

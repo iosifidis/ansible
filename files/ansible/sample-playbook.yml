@@ -1,0 +1,8 @@
+---
+# Πρότυπο Ansible Playbook
+- name: Sample Playbook for Ansible Learning Path
+  hosts: all
+  become: true
+  tasks:
+    - name: Ping test
+      ansible.builtin.ping:
