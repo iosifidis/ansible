@@ -8,8 +8,8 @@
 
 ### 🎯 1. Ansible Learning Path (16 Κεφάλαια)
 - 📘 [Κεφάλαιο 01: Εισαγωγή στο Ansible](./ansible/chapter-01/index.md)
-- 📘 [Κεφάλαιο 02: Inventories & Playbooks](./ansible/chapter-02/index.md)
-- 📘 [Κεφάλαιο 03: Μεταβλητές & Facts](./ansible/chapter-03/index.md)
+- 📘 [Κεφάλαιο 02: High-Level View](./ansible/chapter-02/index.md)
+- 📘 [Κεφάλαιο 03: Environment Setup](./ansible/chapter-03/index.md)
 - 📘 [Κεφάλαιο 04: Έλεγχος Ροής: Conditionals & Loops](./ansible/chapter-04/index.md)
 - 📘 [Κεφάλαιο 05: Handlers & Jinja2 Templates](./ansible/chapter-05/index.md)
 - 📘 [Κεφάλαιο 06: Ansible Roles & Galaxy](./ansible/chapter-06/index.md)
