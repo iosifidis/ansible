@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Κεφάλαιο 2: High-Level View
+title: "Κεφάλαιο 2: High-Level View"
 sort: 2
 ---
 
