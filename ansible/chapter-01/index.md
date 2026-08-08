@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Κεφάλαιο 1: Εισαγωγή στην Ansible 🚀"
+title: "Κεφάλαιο 1: Εισαγωγή στην Ansible"
 sort: 1
 ---
 

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Κεφάλαιο 3: Environment Setup
+title: "Κεφάλαιο 3: Environment Setup"
 sort: 3
 ---
 
