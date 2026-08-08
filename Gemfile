@@ -25,7 +25,6 @@ group :jekyll_plugins do
   gem "jekyll-gist"
   gem "jekyll-mentions"
   gem "jemoji"
-  gem "faraday-retry"
   gem "github-pages"
 end
 
