@@ -18,7 +18,7 @@ sort: 0
 
 | Κεφάλαιο | Κατάσταση | Σύνδεσμος |
 | :--- | :---: | :--- |
-{% for p in ansible_chapters %} | **{{ p.title }}** | {% if p.completed == true %}✅ Ολοκληρώθηκε{% else %}📝 Πρότυπο{% endif %} | [Προβολή →]({{ p.url | relative_url }}) |
+{% for p in ansible_chapters %}{% assign is_template = p.content | contains: 'Εισάγετε εδώ' %} | **{{ p.title }}** | {% if p.completed == true or is_template == false %}✅ Ολοκληρώθηκε{% else %}📝 Πρότυπο{% endif %} | [Προβολή →]({{ p.url | relative_url }}) |
 {% endfor %}
 
 ---
@@ -29,7 +29,7 @@ sort: 0
 
 | Κεφάλαιο | Κατάσταση | Σύνδεσμος |
 | :--- | :---: | :--- |
-{% for p in docker_chapters %} | **{{ p.title }}** | {% if p.completed == true %}✅ Ολοκληρώθηκε{% else %}📝 Πρότυπο{% endif %} | [Προβολή →]({{ p.url | relative_url }}) |
+{% for p in docker_chapters %}{% assign is_template = p.content | contains: 'Εισάγετε εδώ' %} | **{{ p.title }}** | {% if p.completed == true or is_template == false %}✅ Ολοκληρώθηκε{% else %}📝 Πρότυπο{% endif %} | [Προβολή →]({{ p.url | relative_url }}) |
 {% endfor %}
 
 ---
