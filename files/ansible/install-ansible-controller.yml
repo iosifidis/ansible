@@ -1,0 +1,319 @@
+---
+# ============================================================
+# Install Ansible Controller Playbook
+# Εγκατάσταση Ansible controller σε φρέσκο σύστημα
+# Συμβατό με: Debian/Ubuntu, RedHat/Fedora, openSUSE
+# Χρήση: ansible-playbook install-ansible-controller.yml
+#         -i "target_host," -u your_user --ask-become-pass
+# ============================================================
+
+- name: Εγκατάσταση Ansible Controller
+  hosts: "{{ target | default('localhost') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    # Ο χρήστης που θα τρέχει την Ansible
+    ansible_ctrl_user: "ansible"
+
+    # Ο φάκελος εργασίας
+    ansible_work_dir: "/home/{{ ansible_ctrl_user }}/ansible"
+
+    # Η έκδοση Ansible που θέλουμε
+    ansible_pip_package: "ansible"   # ή "ansible==10.x.x" για συγκεκριμένη
+
+    # Collections που θέλουμε
+    ansible_collections:
+      - ansible.posix
+      - community.general
+      - community.docker
+
+  # ══════════════════════════════════════════
+  # TASKS
+  # ══════════════════════════════════════════
+  tasks:
+
+    # ── Εμφάνιση πληροφοριών ─────────────────
+    - name: Εμφάνιση πληροφοριών συστήματος
+      ansible.builtin.debug:
+        msg:
+          - "Hostname    : {{ ansible_facts['hostname'] }}"
+          - "OS Family   : {{ ansible_facts['os_family'] }}"
+          - "Distribution: {{ ansible_facts['distribution'] }}"
+          - "Version     : {{ ansible_facts['distribution_version'] }}"
+          - "Python      : {{ ansible_facts['python_version'] }}"
+
+    # ══════════════════════════════════════════
+    # ΑΦΑΙΡΕΣΗ ΠΑΛΙΑΣ ΕΚΔΟΣΗΣ
+    # ══════════════════════════════════════════
+
+    - name: Αφαίρεση system Ansible (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: ansible
+        state: absent
+        autoremove: true
+      when: ansible_facts['os_family'] == "Debian"
+      ignore_errors: true
+
+    - name: Αφαίρεση system Ansible (RedHat/Fedora)
+      ansible.builtin.dnf:
+        name: ansible
+        state: absent
+        autoremove: true
+      when: ansible_facts['os_family'] == "RedHat"
+      ignore_errors: true
+
+    - name: Αφαίρεση system Ansible (openSUSE)
+      community.general.zypper:
+        name: ansible
+        state: absent
+      when: ansible_facts['os_family'] == "Suse"
+      ignore_errors: true
+
+    # ══════════════════════════════════════════
+    # ΕΓΚΑΤΑΣΤΑΣΗ ΠΡΟΑΠΑΙΤΟΥΜΕΝΩΝ
+    # ══════════════════════════════════════════
+
+    - name: Εγκατάσταση προαπαιτούμενων (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - python3-full
+          - openssh-client
+          - git
+          - curl
+          - vim
+          - tree
+        state: present
+        update_cache: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Εγκατάσταση EPEL repository (Rocky/AlmaLinux)
+      ansible.builtin.dnf:
+        name: epel-release
+        state: present
+      when:
+        - ansible_facts['os_family'] == "RedHat"
+        - ansible_facts['distribution'] != "Fedora"
+
+    - name: Εγκατάσταση προαπαιτούμενων (RedHat/Fedora)
+      ansible.builtin.dnf:
+        name:
+          - python3
+          - python3-pip
+          - python3-virtualenv
+          - openssh-clients
+          - git
+          - curl
+          - vim
+          - tree
+        state: present
+        update_cache: true
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Εγκατάσταση προαπαιτούμενων (openSUSE)
+      community.general.zypper:
+        name:
+          - python3
+          - python3-pip
+          - python3-virtualenv
+          - openssh-clients
+          - git
+          - curl
+          - vim
+          - tree
+        state: present
+      when: ansible_facts['os_family'] == "Suse"
+
+    # ══════════════════════════════════════════
+    # ΔΗΜΙΟΥΡΓΙΑ ANSIBLE USER
+    # ══════════════════════════════════════════
+
+    - name: Δημιουργία ansible user
+      ansible.builtin.user:
+        name: "{{ ansible_ctrl_user }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Sudo δικαιώματα για ansible user
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ ansible_ctrl_user }}"
+        content: "{{ ansible_ctrl_user }} ALL=(ALL) NOPASSWD: ALL\n"
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Δημιουργία .ssh directory
+      ansible.builtin.file:
+        path: "/home/{{ ansible_ctrl_user }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ ansible_ctrl_user }}"
+        group: "{{ ansible_ctrl_user }}"
+
+    # ══════════════════════════════════════════
+    # ΔΗΜΙΟΥΡΓΙΑ ΔΟΜΗΣ ΦΑΚΕΛΩΝ
+    # ══════════════════════════════════════════
+
+    - name: Δημιουργία δομής φακέλων εργασίας
+      ansible.builtin.file:
+        path: "{{ ansible_work_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ ansible_ctrl_user }}"
+        group: "{{ ansible_ctrl_user }}"
+        mode: '0755'
+      loop:
+        - ""                      # ο κύριος φάκελος
+        - "inventory"
+        - "inventory/group_vars"
+        - "inventory/host_vars"
+        - "playbooks"
+        - "roles"
+        - "files"
+        - "templates"
+
+    # ══════════════════════════════════════════
+    # ΔΗΜΙΟΥΡΓΙΑ VIRTUAL ENVIRONMENT
+    # ══════════════════════════════════════════
+
+    - name: Δημιουργία Python venv
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ ansible_work_dir }}/venv"
+        creates: "{{ ansible_work_dir }}/venv/bin/activate"
+      become_user: "{{ ansible_ctrl_user }}"
+
+    # ══════════════════════════════════════════
+    # ΕΓΚΑΤΑΣΤΑΣΗ ANSIBLE
+    # ══════════════════════════════════════════
+
+    - name: Αναβάθμιση pip στο venv
+      ansible.builtin.pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ ansible_work_dir }}/venv"
+      become_user: "{{ ansible_ctrl_user }}"
+
+    - name: Εγκατάσταση Ansible μέσω pip
+      ansible.builtin.pip:
+        name: "{{ ansible_pip_package }}"
+        state: present
+        virtualenv: "{{ ansible_work_dir }}/venv"
+      become_user: "{{ ansible_ctrl_user }}"
+
+    # ══════════════════════════════════════════
+    # ΔΗΜΙΟΥΡΓΙΑ ansible.cfg
+    # ══════════════════════════════════════════
+
+    - name: Δημιουργία ansible.cfg
+      ansible.builtin.copy:
+        dest: "{{ ansible_work_dir }}/ansible.cfg"
+        owner: "{{ ansible_ctrl_user }}"
+        group: "{{ ansible_ctrl_user }}"
+        mode: '0644'
+        content: |
+          # Ansible Configuration
+          # Παράχθηκε από Ansible - τροποποίησε αν χρειαστεί
+
+          [defaults]
+          inventory            = ./inventory/hosts.ini
+          remote_user          = ansible
+          private_key_file     = /home/ansible/.ssh/id_ed25519
+          forks                = 10
+          host_key_checking    = False
+          stdout_callback      = default
+          result_format        = yaml
+          deprecation_warnings = False
+          interpreter_python   = auto_silent
+          log_path             = {{ ansible_work_dir }}/ansible.log
+
+          [privilege_escalation]
+          become               = true
+          become_method        = sudo
+          become_user          = root
+          become_ask_pass      = false
+
+    # ══════════════════════════════════════════
+    # ΔΗΜΙΟΥΡΓΙΑ ΒΑΣΙΚΟΥ INVENTORY
+    # ══════════════════════════════════════════
+
+    - name: Δημιουργία βασικού inventory
+      ansible.builtin.copy:
+        dest: "{{ ansible_work_dir }}/inventory/hosts.ini"
+        owner: "{{ ansible_ctrl_user }}"
+        group: "{{ ansible_ctrl_user }}"
+        mode: '0644'
+        content: |
+          # Ansible Inventory
+          # Προσθέσε τους servers σου εδώ
+
+          [controller]
+          localhost ansible_connection=local
+
+          [debian_based]
+          # server01 ansible_host=192.168.1.X
+
+          [redhat_based]
+          # server01 ansible_host=192.168.1.X
+
+          [opensuse_based]
+          # server01 ansible_host=192.168.1.X
+
+          [all_managed:children]
+          debian_based
+          redhat_based
+          opensuse_based
+
+          [all:vars]
+          ansible_user                 = ansible
+          ansible_ssh_private_key_file = /home/ansible/.ssh/id_ed25519
+          ansible_become               = true
+          ansible_become_method        = sudo
+
+    # ══════════════════════════════════════════
+    # ΕΓΚΑΤΑΣΤΑΣΗ COLLECTIONS
+    # ══════════════════════════════════════════
+
+    - name: Εγκατάσταση Ansible Collections
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: "{{ item }}"
+      loop: "{{ ansible_collections }}"
+      become_user: "{{ ansible_ctrl_user }}"
+      environment:
+        PATH: "{{ ansible_work_dir }}/venv/bin:{{ ansible_env.PATH }}"
+
+    # ══════════════════════════════════════════
+    # ΡΥΘΜΙΣΗ .bashrc
+    # ══════════════════════════════════════════
+
+    - name: Αυτόματη ενεργοποίηση venv στο .bashrc
+      ansible.builtin.blockinfile:
+        path: "/home/{{ ansible_ctrl_user }}/.bashrc"
+        marker: "# {mark} ANSIBLE VENV"
+        block: |
+          # Αυτόματη ενεργοποίηση Ansible venv
+          source {{ ansible_work_dir }}/venv/bin/activate
+          cd {{ ansible_work_dir }}
+        create: true
+        owner: "{{ ansible_ctrl_user }}"
+        group: "{{ ansible_ctrl_user }}"
+
+    # ══════════════════════════════════════════
+    # ΤΕΛΙΚΟ ΜΗΝΥΜΑ
+    # ══════════════════════════════════════════
+
+    - name: Εγκατάσταση ολοκληρώθηκε!
+      ansible.builtin.debug:
+        msg:
+          - "✅ Ansible εγκαταστάθηκε επιτυχώς!"
+          - "✅ Φάκελος εργασίας: {{ ansible_work_dir }}"
+          - "✅ Virtual env: {{ ansible_work_dir }}/venv"
+          - "✅ Collections: {{ ansible_collections | join(', ') }}"
+          - ""
+          - "📋 Επόμενα βήματα:"
+          - "   1. sudo su - ansible"
+          - "   2. ssh-keygen -t ed25519 -C 'ansible@{{ ansible_facts['hostname'] }}'"
+          - "   3. Επεξεργασία inventory/hosts.ini"
+          - "   4. ansible all -m ansible.builtin.ping"
