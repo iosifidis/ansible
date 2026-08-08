@@ -39,8 +39,8 @@ sort: 5
 
 ## Υποπαράγραφοι
 - [5.1 Τι είναι το ansible.cfg ⚙️](./5.1-ansible.cfg.md)   
-- [5.2 Δομή του ansible.cfg 📋](./5.1-ansible.cfg.md)   
-- [5.3 Section \[defaults\] ⚙️](./5.1-ansible.cfg.md)   
-- [5.4 Section [privilege_escalation\] 🔐](./5.1-ansible.cfg.md)   
-- [5.5 Sections [ssh_connection\] & [persistent_connection\] 🔌](./5.1-ansible.cfg.md)   
-- [5.6 Ανάλυση του υπάρχοντος ansible.cfg 🔍](./5.1-ansible.cfg.md)
+- [5.2 Δομή του ansible.cfg 📋](./5.2-ansible.cfg-structure.md)   
+- [5.3 Section \[defaults\] ⚙️](./5.3-section-defaults.md)   
+- [5.4 Section \[privilege_escalation\] 🔐](./5.4-privilege_escalation.md)   
+- [5.5 Sections \[ssh_connection\] & \[persistent_connection\] 🔌](./5.5-ssh_connection-persistent_connection.md)   
+- [5.6 Ανάλυση του υπάρχοντος ansible.cfg 🔍](./5.6-ansible.cfg-analysis .md)
