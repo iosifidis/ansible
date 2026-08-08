@@ -1,10 +1,10 @@
 ---
 layout: default
-title: "Κεφάλαιο 7: Connecting to Remote Environments"
+title: "Κεφάλαιο 7: Σύνδεση σε απομακρυσμένα περιβάλλοντα"
 sort: 7
 ---
 
-# Κεφάλαιο 7: Connecting to Remote Environments 🔌
+# Κεφάλαιο 7: Σύνδεση σε απομακρυσμένα περιβάλλοντα 🔌
 
 ## Τι θα καλύψουμε
 
