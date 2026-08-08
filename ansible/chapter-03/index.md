@@ -48,4 +48,4 @@ sort: 3
 - [3.8 Πρώτο test σύνδεσης με Ansible 🚀](./3.8-connection-test.md)   
 - [3.9 Security Playbook 🔐](./3.9-security-playbook.md)
 
-> 💡 **Σημαντικό:** Αυτό το [`security-bootstrap.yml`](/files/ansible/security-bootstrap.yml) είναι ήδη **παραγωγικό εργαλείο** — μπορείς να το τρέξεις σε κάθε νέο server που προσθέτεις!
+> 💡 **Σημαντικό:** Αυτό το [`security-bootstrap.yml`](../../files/ansible/security-bootstrap.yml) είναι ήδη **παραγωγικό εργαλείο** — μπορείς να το τρέξεις σε κάθε νέο server που προσθέτεις!
