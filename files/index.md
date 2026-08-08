@@ -6,29 +6,38 @@ sort: 3
 
 # 📁 Ansible Files & Downloadable Resources
 
-Καλώς ήρθατε στη βιβλιοθήκη αρχείων! Εδώ μπορείτε να βρείτε και να κατεβάσετε έτοιμα Playbooks, Docker Compose αρχεία, scripts και συνοδευτικό υλικό για τα εγχειρίδια.
+Καλώς ήρθατε στη βιβλιοθήκη αρχείων! Τα αρχεία αυτής της σελίδας **ενημερώνονται αυτόματα** κάθε φορά που προσθέτετε νέα αρχεία στους φακέλους `files/ansible/` και `files/docker/`.
 
 ---
 
-## 🛠️ Ansible Playbooks & Configs
+## 🛠️ Ansible Playbooks & Configs (`files/ansible/`)
 
-Τα παρακάτω αρχεία βρίσκονται στον φάκελο `files/ansible/`:
+{% assign ansible_files = site.static_files | where_exp: "item", "item.path contains '/files/ansible/'" %}
 
-- [📥 sample-playbook.yml](/files/ansible/sample-playbook.yml) - Πρότυπο αρχείο Ansible Playbook.
-
----
-
-## 🐳 Docker Automation Files
-
-Τα παρακάτω αρχεία βρίσκονται στον φάκελο `files/docker/`:
-
-- [📥 docker-compose.yml](/files/docker/docker-compose.yml) - Πρότυπο αρχείο Docker Compose.
+{% if ansible_files.size > 0 %}
+{% for file in ansible_files %}
+- [📥 **{{ file.name }}**]({{ file.path | relative_url }})
+{% endfor %}
+{% else %}
+*Δεν υπάρχουν ακόμα διαθέσιμα αρχεία στον φάκελο `files/ansible/`.*
+{% endif %}
 
 ---
 
-## 💡 Πώς να προσθέσετε νέα αρχεία
-1. Τοποθετήστε το αρχείο σας στον φάκελο `files/ansible/` ή `files/docker/`.
-2. Προσθέστε έναν σύνδεσμο σε αυτή τη σελίδα ή μέσα σε οποιοδήποτε κεφάλαιο χρησιμοποιώντας τη μορφή:
-   ```markdown
-   [📥 Όνομα Αρχείου](/files/ansible/filename.ext)
-   ```
+## 🐳 Docker Automation Files (`files/docker/`)
+
+{% assign docker_files = site.static_files | where_exp: "item", "item.path contains '/files/docker/'" %}
+
+{% if docker_files.size > 0 %}
+{% for file in docker_files %}
+- [📥 **{{ file.name }}**]({{ file.path | relative_url }})
+{% endfor %}
+{% else %}
+*Δεν υπάρχουν ακόμα διαθέσιμα αρχεία στον φάκελο `files/docker/`.*
+{% endif %}
+
+---
+
+## 💡 Πώς λειτουργεί η αυτόματη προσθήκη
+Απλώς τοποθετήστε οποιοδήποτε αρχείο (π.χ. `.yml`, `.sh`, `.zip`, `.pdf`, `.png`) στον φάκελο `files/ansible/` ή `files/docker/`.
+Το σύστημα εντοπίζει **αυτόματα** όλα τα νέα αρχεία και δημιουργεί τους συνδέσμους λήψης χωρίς να χρειάζεται να κάνετε καμία χειροκίνητη αλλαγή στη σελίδα!
