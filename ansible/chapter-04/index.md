@@ -66,3 +66,5 @@ sort: 4
 - [4.4 Επαλήθευση εγκατάστασης](./4.4-verification.md)   
 - [4.5 Εγκατάσταση Collections](./4.5-collections-installation.md)   
 - [4.6 Αυτοματοποίηση Εγκατάστασης με Playbook](./4.6-automation-with-playbooks.md)   
+
+> 💡 **Σημαντικό:** Αυτό το [`install-ansible-controller.yml`](../../files/ansible/install-ansible-controller.yml) είναι ήδη **παραγωγικό playbook** — είναι το **"bootstrap"** του controller σου. Το τρέχεις μία φορά σε ένα φρέσκο σύστημα και έχεις έτοιμο Ansible controller!
