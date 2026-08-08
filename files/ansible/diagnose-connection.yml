@@ -1,0 +1,62 @@
+---
+# diagnose-connection.yml
+# Πλήρης διάγνωση σύνδεσης
+
+- name: Diagnose Connection Issues
+  hosts: "{{ target | default('all') }}"
+  gather_facts: false
+
+  tasks:
+
+    - name: Βήμα 1 - Raw ping (χωρίς Python)
+      ansible.builtin.raw: echo "raw connection OK"
+      register: raw_result
+      ignore_errors: true
+
+    - name: Raw αποτέλεσμα
+      ansible.builtin.debug:
+        msg: "Raw: {{ raw_result.stdout | default('FAILED') }}"
+
+    - name: Βήμα 2 - Python έλεγχος
+      ansible.builtin.raw: python3 --version
+      register: python_result
+      ignore_errors: true
+
+    - name: Python αποτέλεσμα
+      ansible.builtin.debug:
+        msg: "Python: {{ python_result.stdout | default('NOT FOUND') }}"
+
+    - name: Βήμα 3 - Gathering Facts
+      ansible.builtin.setup:
+        gather_subset: min
+      register: facts_result
+      ignore_errors: true
+
+    - name: Facts αποτέλεσμα
+      ansible.builtin.debug:
+        msg: "Facts: {{ 'OK' if not facts_result.failed else 'FAILED' }}"
+
+    - name: Βήμα 4 - Sudo έλεγχος
+      ansible.builtin.command: whoami
+      become: true
+      register: sudo_result
+      ignore_errors: true
+
+    - name: Sudo αποτέλεσμα
+      ansible.builtin.debug:
+        msg: "Sudo: {{ sudo_result.stdout | default('FAILED') }}"
+
+    - name: Τελική Αναφορά
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Host  : {{ inventory_hostname }}"
+          - "Raw   : {{ 'OK ✅' if not raw_result.failed
+                        else 'FAILED ❌' }}"
+          - "Python: {{ 'OK ✅' if not python_result.failed
+                        else 'FAILED ❌' }}"
+          - "Facts : {{ 'OK ✅' if not facts_result.failed
+                        else 'FAILED ❌' }}"
+          - "Sudo  : {{ 'OK ✅' if not sudo_result.failed
+                        else 'FAILED ❌' }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

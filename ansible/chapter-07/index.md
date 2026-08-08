@@ -41,5 +41,5 @@ sort: 7
 - [7.2 Μέθοδοι σύνδεσης 🔌](./7.2-connection-methods.md)   
 - [7.3 SSH Key Management 🔑](./7.3-ssh-keys-management.md)   
 - [7.4 Ansible Manager Server Configuration ⚙️](./7.4-ansible-manager-server-config.md)   
-- [7.5 Ασφάλεια σύνδεσης 🔐](./)   
-- [7.6 Troubleshooting συνδέσεων 🔧](./)   
+- [7.5 Ασφάλεια σύνδεσης 🔐](./7.5-connection-security.md)   
+- [7.6 Troubleshooting συνδέσεων 🔧](./7.6-connection-troubleshooting.md)   
