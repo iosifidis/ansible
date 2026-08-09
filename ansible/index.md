@@ -32,6 +32,7 @@ sort: 1
 ║  ✅ Κεφ. 15 → Roles                          ║
 ║  ✅ Κεφ. 16 → Ansible Galaxy                 ║
 ║  ✅ Κεφ. 17 → Error Handling & Debugging     ║
+║  ✅ Κεφ. 18 → Performance & Parallel Exec.  ║
 ║                                              ║
 ╠══════════════════════════════════════════════╣
 ║  ➡️  Επόμενο: Docker Automation! 🐳          ║
