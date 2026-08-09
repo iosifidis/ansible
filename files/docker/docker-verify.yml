@@ -1,0 +1,383 @@
+---
+# ============================================================
+# Docker Verification Playbook
+# Πλήρης έλεγχος Docker installation
+# ============================================================
+
+- name: Docker Verification
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    test_container_name: ansible_docker_test
+    test_image:          hello-world
+    test_network:        ansible_test_net
+    test_volume:         ansible_test_vol
+
+  tasks:
+
+    # ══════════════════════════════════════════
+    # 1. DOCKER SERVICE
+    # ══════════════════════════════════════════
+
+    - name: Check Docker service status
+      ansible.builtin.service_facts:
+      tags: [verify, service]
+
+    - name: Verify Docker is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['docker.service'] is defined
+          - ansible_facts.services['docker.service'].state == 'running'
+        fail_msg:    "❌ Docker service is NOT running!"
+        success_msg: "✅ Docker service is running"
+      tags: [verify, service]
+
+    # ══════════════════════════════════════════
+    # 2. DOCKER VERSION
+    # ══════════════════════════════════════════
+
+    - name: Get Docker version
+      ansible.builtin.command:
+        cmd: docker version --format json
+      register:     docker_version_raw
+      changed_when: false
+      tags: [verify, version]
+
+    - name: Parse Docker version
+      ansible.builtin.set_fact:
+        docker_version_info: "{{ docker_version_raw.stdout | from_json }}"
+      tags: [verify, version]
+
+    - name: Show Docker version info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Docker Version Info"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Client : {{ docker_version_info.Client.Version }}"
+          - "Server : {{ docker_version_info.Server.Components[0].Version }}"
+          - "API    : {{ docker_version_info.Client.ApiVersion }}"
+          - "OS/Arch: {{ docker_version_info.Client.Os }}/{{ docker_version_info.Client.Arch }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: [verify, version]
+
+    # ══════════════════════════════════════════
+    # 3. DOCKER INFO
+    # ══════════════════════════════════════════
+
+    - name: Get Docker info
+      ansible.builtin.command:
+        cmd: docker info --format json
+      register:     docker_info_raw
+      changed_when: false
+      tags: [verify, info]
+
+    - name: Parse Docker info
+      ansible.builtin.set_fact:
+        docker_info: "{{ docker_info_raw.stdout | from_json }}"
+      tags: [verify, info]
+
+    - name: Verify Docker configuration
+      ansible.builtin.assert:
+        that:
+          - docker_info.Driver == "overlay2"
+          - docker_info.LoggingDriver == "json-file"
+          - docker_info.LiveRestoreEnabled == true
+        fail_msg:    "❌ Docker configuration is not optimal!"
+        success_msg: "✅ Docker configuration is correct"
+      tags: [verify, info]
+
+    - name: Show Docker info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Docker Configuration"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Storage Driver : {{ docker_info.Driver }}"
+          - "Logging Driver : {{ docker_info.LoggingDriver }}"
+          - "Live Restore   : {{ docker_info.LiveRestoreEnabled }}"
+          - "Containers     : {{ docker_info.Containers }}"
+          - "Running        : {{ docker_info.ContainersRunning }}"
+          - "Images         : {{ docker_info.Images }}"
+          - "CPUs           : {{ docker_info.NCPU }}"
+          - "Memory         : {{ (docker_info.MemTotal / 1073741824) | round(1) }}GB"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: [verify, info]
+
+    # ══════════════════════════════════════════
+    # 4. DOCKER COMPOSE
+    # ══════════════════════════════════════════
+
+    - name: Check Docker Compose
+      ansible.builtin.command:
+        cmd: docker compose version
+      register:     compose_check
+      changed_when: false
+      ignore_errors: true
+      tags: [verify, compose]
+
+    - name: Verify Docker Compose
+      ansible.builtin.assert:
+        that:
+          - compose_check.rc == 0
+        fail_msg:    "❌ Docker Compose is NOT available!"
+        success_msg: "✅ {{ compose_check.stdout }}"
+      tags: [verify, compose]
+
+    # ══════════════════════════════════════════
+    # 5. DOCKER NETWORK
+    # ══════════════════════════════════════════
+
+    - name: Create test network
+      community.docker.docker_network:
+        name:  "{{ test_network }}"
+        state: present
+      tags: [verify, network]
+
+    - name: Verify test network
+      ansible.builtin.command:
+        cmd: "docker network inspect {{ test_network }}"
+      register:     network_check
+      changed_when: false
+      tags: [verify, network]
+
+    - name: Network verification
+      ansible.builtin.debug:
+        msg: "✅ Network {{ test_network }} created successfully"
+      tags: [verify, network]
+
+    # ══════════════════════════════════════════
+    # 6. DOCKER VOLUME
+    # ══════════════════════════════════════════
+
+    - name: Create test volume
+      community.docker.docker_volume:
+        name:  "{{ test_volume }}"
+        state: present
+      tags: [verify, volume]
+
+    - name: Verify test volume
+      ansible.builtin.command:
+        cmd: "docker volume inspect {{ test_volume }}"
+      register:     volume_check
+      changed_when: false
+      tags: [verify, volume]
+
+    - name: Volume verification
+      ansible.builtin.debug:
+        msg: "✅ Volume {{ test_volume }} created successfully"
+      tags: [verify, volume]
+
+    # ══════════════════════════════════════════
+    # 7. CONTAINER LIFECYCLE
+    # ══════════════════════════════════════════
+
+    - name: Pull test image
+      community.docker.docker_image:
+        name:   "{{ test_image }}"
+        source: pull
+      tags: [verify, container]
+
+    - name: Run test container
+      community.docker.docker_container:
+        name:            "{{ test_container_name }}"
+        image:           "{{ test_image }}"
+        state:           started
+        networks:
+          - name: "{{ test_network }}"
+        volumes:
+          - "{{ test_volume }}:/data"
+        detach:          false
+        auto_remove:     false
+        cleanup:         false
+      register: container_result
+      tags: [verify, container]
+
+    - name: Get container info
+      community.docker.docker_container_info:
+        name: "{{ test_container_name }}"
+      register: container_info
+      tags: [verify, container]
+
+    - name: Verify container ran
+      ansible.builtin.assert:
+        that:
+          - container_info.exists
+        fail_msg:    "❌ Test container failed!"
+        success_msg: "✅ Test container ran successfully"
+      tags: [verify, container]
+
+    - name: Container lifecycle test
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Container Lifecycle Test"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Name   : {{ container_info.container.Name }}"
+          - "Image  : {{ container_info.container.Config.Image }}"
+          - "Status : {{ container_info.container.State.Status }}"
+          - "Network: {{ test_network }} ✅"
+          - "Volume : {{ test_volume }} ✅"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: [verify, container]
+
+    # ══════════════════════════════════════════
+    # 8. INTERNET CONNECTIVITY
+    # ══════════════════════════════════════════
+
+    - name: Test internet connectivity from container
+      community.docker.docker_container:
+        name:        connectivity_test
+        image:       alpine:latest
+        state:       started
+        command:     "wget -q -O /dev/null https://registry-1.docker.io"
+        detach:      false
+        auto_remove: true
+        cleanup:     true
+      register:      connectivity_result
+      ignore_errors: true
+      tags: [verify, network]
+
+    - name: Internet connectivity result
+      ansible.builtin.debug:
+        msg: >
+          Container internet:
+          {{ '✅ Connected' if not connectivity_result.failed
+             else '⚠️ No internet (check firewall)' }}
+      tags: [verify, network]
+
+    # ══════════════════════════════════════════
+    # 9. SYSTEM OPTIMIZATIONS
+    # ══════════════════════════════════════════
+
+    - name: Verify kernel parameters
+      ansible.builtin.command:
+        cmd: "sysctl {{ item.name }}"
+      register:     sysctl_check
+      changed_when: false
+      loop:
+        - name: net.ipv4.ip_forward
+          expected: "1"
+        - name: vm.max_map_count
+          expected: "262144"
+      loop_control:
+        label: "{{ item.name }}"
+      tags: [verify, system]
+
+    - name: Show sysctl values
+      ansible.builtin.debug:
+        msg: "{{ item.stdout }}"
+      loop: "{{ sysctl_check.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      tags: [verify, system]
+
+    # ══════════════════════════════════════════
+    # 10. USER PERMISSIONS
+    # ══════════════════════════════════════════
+
+    - name: Check docker group members
+      ansible.builtin.command:
+        cmd: getent group docker
+      register:     docker_group
+      changed_when: false
+      tags: [verify, users]
+
+    - name: Docker group info
+      ansible.builtin.debug:
+        msg: "Docker group: {{ docker_group.stdout }}"
+      tags: [verify, users]
+
+    - name: Verify ansible user in docker group
+      ansible.builtin.assert:
+        that:
+          - "'ansible' in docker_group.stdout"
+        fail_msg:    "❌ ansible user NOT in docker group!"
+        success_msg: "✅ ansible user is in docker group"
+      tags: [verify, users]
+
+    # ══════════════════════════════════════════
+    # 11. DISK SPACE
+    # ══════════════════════════════════════════
+
+    - name: Check Docker disk usage
+      ansible.builtin.command:
+        cmd: docker system df --format json
+      register:     docker_df
+      changed_when: false
+      ignore_errors: true
+      tags: [verify, disk]
+
+    - name: Show Docker disk usage
+      ansible.builtin.debug:
+        msg: "Docker disk usage: {{ docker_df.stdout | default('N/A') }}"
+      tags: [verify, disk]
+
+    # ══════════════════════════════════════════
+    # 12. CLEANUP TEST RESOURCES
+    # ══════════════════════════════════════════
+
+    - name: Remove test container
+      community.docker.docker_container:
+        name:  "{{ test_container_name }}"
+        state: absent
+        force_kill: true
+      tags: [verify, cleanup]
+
+    - name: Remove test network
+      community.docker.docker_network:
+        name:  "{{ test_network }}"
+        state: absent
+        force: true
+      tags: [verify, cleanup]
+
+    - name: Remove test volume
+      community.docker.docker_volume:
+        name:  "{{ test_volume }}"
+        state: absent
+        force: true
+      tags: [verify, cleanup]
+
+    - name: Remove test image
+      community.docker.docker_image:
+        name:   "{{ test_image }}"
+        state:  absent
+        force_absent: true
+      ignore_errors: true
+      tags: [verify, cleanup]
+
+    # ══════════════════════════════════════════
+    # 13. FINAL REPORT
+    # ══════════════════════════════════════════
+
+    - name: Final Verification Report
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════╗"
+          - "║    DOCKER VERIFICATION REPORT        ║"
+          - "╠══════════════════════════════════════╣"
+          - "║ Host    : {{ inventory_hostname }}"
+          - "║ OS      : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          - "║ Arch    : {{ ansible_facts['architecture'] }}"
+          - "╠══════════════════════════════════════╣"
+          - "║ CHECKS:                              ║"
+          - "║ Docker Service  : ✅                 ║"
+          - "║ Docker Version  : {{ docker_version_info.Client.Version }}"
+          - "║ Docker Compose  : ✅                 ║"
+          - "║ Storage Driver  : {{ docker_info.Driver }}"
+          - "║ Logging Driver  : {{ docker_info.LoggingDriver }}"
+          - "║ Live Restore    : {{ docker_info.LiveRestoreEnabled }}"
+          - "║ Network Test    : ✅                 ║"
+          - "║ Volume Test     : ✅                 ║"
+          - "║ Container Test  : ✅                 ║"
+          - "║ User Permissions: ✅                 ║"
+          - "╠══════════════════════════════════════╣"
+          - "║ RESOURCES:                           ║"
+          - "║ CPUs   : {{ docker_info.NCPU }}"
+          - "║ Memory : {{ (docker_info.MemTotal / 1073741824) | round(1) }}GB"
+          - "║ Images : {{ docker_info.Images }}"
+          - "║ Running: {{ docker_info.ContainersRunning }}"
+          - "╚══════════════════════════════════════╝"
+      tags: always

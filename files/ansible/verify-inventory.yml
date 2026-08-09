@@ -1,0 +1,52 @@
+---
+# verify-inventory.yml
+# Τρέξε: ansible-playbook playbooks/verify-inventory.yml
+
+- name: Επαλήθευση Inventory
+  hosts: all
+  gather_facts: true
+
+  tasks:
+
+    - name: Βασικές πληροφορίες host
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Host     : {{ inventory_hostname }}"
+          - "IP       : {{ ansible_facts['default_ipv4']['address'] }}"
+          - "OS       : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          - "Kernel   : {{ ansible_facts['kernel'] }}"
+          - "Groups   : {{ group_names | join(', ') }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    - name: Έλεγχος μνήμης
+      ansible.builtin.debug:
+        msg:
+          - "RAM Total: {{ ansible_facts['memtotal_mb'] }} MB"
+          - "RAM Free : {{ ansible_facts['memfree_mb'] }} MB"
+
+    - name: Έλεγχος δίσκου
+      ansible.builtin.debug:
+        msg: "Disk {{ item.mount }}: {{ item.size_available | human_readable }}"
+      loop: "{{ ansible_facts['mounts'] }}"
+      when: item.mount == '/'
+
+    - name: Έλεγχος SSH connectivity
+      ansible.builtin.ping:
+
+    - name: Έλεγχος sudo
+      ansible.builtin.command: whoami
+      become: true
+      register: whoami_result
+
+    - name: Εμφάνιση sudo αποτελέσματος
+      ansible.builtin.debug:
+        msg: "Sudo whoami: {{ whoami_result.stdout }}"
+
+    - name: Έλεγχος Python version
+      ansible.builtin.command: python3 --version
+      register: python_result
+
+    - name: Εμφάνιση Python version
+      ansible.builtin.debug:
+        msg: "Python: {{ python_result.stdout }}"

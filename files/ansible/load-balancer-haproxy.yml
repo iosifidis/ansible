@@ -1,0 +1,174 @@
+---
+# ============================================================
+# Load Balancer Setup Playbook
+# Architecture: HAProxy → nginx web servers
+# ============================================================
+
+# ── Play 1: Web Servers ───────────────────────
+- name: Configure Web Servers
+  hosts: webservers
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Web Server info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Configuring Web Server"
+          - "Host: {{ inventory_hostname }}"
+          - "IP  : {{ ansible_facts['default_ipv4']['address'] }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+    - name: Create web root
+      ansible.builtin.file:
+        path:  "{{ web_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode:  '0755'
+      tags: setup
+
+    - name: Deploy test page
+      ansible.builtin.copy:
+        dest:  "{{ web_root }}/index.html"
+        owner: www-data
+        group: www-data
+        mode:  '0644'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>{{ inventory_hostname }}</title>
+              <style>
+                  body { font-family: Arial;
+                         text-align: center;
+                         padding: 50px;
+                         background: #f0f8ff; }
+                  .box { background: white;
+                         padding: 30px;
+                         border-radius: 10px;
+                         display: inline-block;
+                         box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                  h1   { color: #2196F3; }
+              </style>
+          </head>
+          <body>
+              <div class="box">
+                  <h1>🌐 {{ inventory_hostname }}</h1>
+                  <p><b>IP:</b> {{ ansible_facts['default_ipv4']['address'] }}</p>
+                  <p><b>OS:</b> {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</p>
+                  <p><b>Role:</b> Web Server</p>
+                  <p><b>Managed by:</b> Ansible ✅</p>
+              </div>
+          </body>
+          </html>
+      tags: [setup, content]
+
+    # ── Health check endpoint ──────────────────
+    - name: Create health check endpoint
+      ansible.builtin.copy:
+        dest:  "{{ web_root }}/health"
+        owner: www-data
+        group: www-data
+        mode:  '0644'
+        content: "OK"
+      tags: [setup, health]
+
+  roles:
+    - role: geerlingguy.nginx
+      tags: nginx
+
+  post_tasks:
+    - name: Verify web server
+      ansible.builtin.uri:
+        url:         "http://localhost:{{ http_port }}"
+        status_code: 200
+      register:      web_check
+      ignore_errors: true
+      tags: verify
+
+    - name: Verify health endpoint
+      ansible.builtin.uri:
+        url:         "http://localhost:{{ http_port }}/health"
+        status_code: 200
+      register:      health_check
+      ignore_errors: true
+      tags: verify
+
+    - name: Web Server Status
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Web Server: {{ inventory_hostname }}"
+          - "HTTP  : {{ '✅ OK' if not web_check.failed else '❌' }}"
+          - "Health: {{ '✅ OK' if not health_check.failed else '❌' }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+# ── Play 2: Load Balancer ─────────────────────
+- name: Configure Load Balancer
+  hosts: loadbalancers
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Load Balancer info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Configuring Load Balancer"
+          - "Host    : {{ inventory_hostname }}"
+          - "Backends: {{ groups['webservers'] | join(', ') }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+  roles:
+    - role: haproxy
+      tags: haproxy
+      vars:
+        haproxy_frontend_port:   "{{ lb_port }}"
+        haproxy_stats_port:      "{{ lb_stats_port }}"
+        haproxy_balance_method:  roundrobin
+        haproxy_health_check:    true
+        haproxy_stats_enabled:   true
+        haproxy_stats_user:      admin
+        haproxy_stats_password:  "{{ vault_haproxy_stats_password | default('admin') }}"
+
+  post_tasks:
+
+    - name: Verify load balancer
+      ansible.builtin.uri:
+        url:         "http://localhost:{{ lb_port }}"
+        status_code: [200, 302]
+      register:      lb_check
+      ignore_errors: true
+      tags: verify
+
+    - name: Verify stats page
+      ansible.builtin.uri:
+        url:         "http://localhost:{{ lb_stats_port }}/stats"
+        status_code: 200
+        url_username: admin
+        url_password: "{{ vault_haproxy_stats_password | default('admin') }}"
+        force_basic_auth: true
+      register:      stats_check
+      ignore_errors: true
+      tags: verify
+
+    - name: Load Balancer Status
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "✅ LOAD BALANCER SETUP COMPLETE"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "LB Host : {{ inventory_hostname }}"
+          - "Frontend: port {{ lb_port }}"
+          - "Stats   : port {{ lb_stats_port }}/stats"
+          - "HTTP    : {{ '✅ OK' if not lb_check.failed else '❌' }}"
+          - "Stats   : {{ '✅ OK' if not stats_check.failed else '❌' }}"
+          - "Backends:"
+          - "{% for srv in groups['webservers'] %}  → {{ srv }} ({{ hostvars[srv]['ansible_host'] }}){% endfor %}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always

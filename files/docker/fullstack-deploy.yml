@@ -1,0 +1,97 @@
+---
+# ============================================================
+# Full Stack Deployment Playbook
+# ============================================================
+
+- name: Full Stack Deployment
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    stack_name:    mystack
+    stack_version: "{{ version | default('1.0.0') }}"
+    app_env:       production
+    stack_domain:  "{{ ansible_facts['default_ipv4']['address'] }}"
+
+    # ── Images ────────────────────────────────
+    nginx_image:    nginx:1.25.3-alpine
+    app_image:      "nginx:1.25.3-alpine"    # placeholder
+    postgres_image: postgres:15.4-alpine
+    redis_image:    redis:7.2-alpine
+    adminer_image:  adminer:4-standalone
+
+    # ── Features ──────────────────────────────
+    adminer_enabled:   true
+    monitoring_enabled: true
+    portainer_enabled: true
+    backup_enabled:    true
+
+    # ── Admin access ──────────────────────────
+    admin_allowed_ips:
+      - 127.0.0.1
+      - 192.168.1.0/24
+
+  pre_tasks:
+
+    - name: Pre-deployment checks
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['docker.service'].state == 'running'
+          - ansible_facts['memtotal_mb'] | int >= 1024
+        fail_msg: "❌ Docker not running or insufficient RAM!"
+      vars:
+        ansible_facts:
+          services:
+            docker.service:
+              state: running
+      ignore_errors: true
+      tags: always
+
+    - name: Deployment info
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════╗"
+          - "║   FULL STACK DEPLOYMENT              ║"
+          - "╠══════════════════════════════════════╣"
+          - "║ Stack  : {{ stack_name }} v{{ stack_version }}"
+          - "║ Host   : {{ inventory_hostname }}"
+          - "║ IP     : {{ ansible_facts['default_ipv4']['address'] }}"
+          - "║ RAM    : {{ (ansible_facts['memtotal_mb'] / 1024) | round(1) }}GB"
+          - "║ CPUs   : {{ ansible_facts['processor_vcpus'] }}"
+          - "╠══════════════════════════════════════╣"
+          - "║ Services:                            ║"
+          - "║ ✅ Nginx + App + Postgres + Redis    ║"
+          - "{% if adminer_enabled %}║ ✅ Adminer (DB UI)                   ║{% endif %}"
+          - "{% if monitoring_enabled %}║ ✅ cAdvisor + Portainer              ║{% endif %}"
+          - "╚══════════════════════════════════════╝"
+      tags: always
+
+  roles:
+    - role: fullstack
+      tags: fullstack
+
+  post_tasks:
+
+    - name: Access Information
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════════╗"
+          - "║   DEPLOYMENT COMPLETE! 🎉                ║"
+          - "╠══════════════════════════════════════════╣"
+          - "║ Main App : http://{{ ansible_facts['default_ipv4']['address'] }}"
+          - "{% if adminer_enabled %}"
+          - "║ Adminer  : http://{{ ansible_facts['default_ipv4']['address'] }}/adminer/"
+          - "{% endif %}"
+          - "{% if monitoring_enabled %}"
+          - "║ Portainer: http://{{ ansible_facts['default_ipv4']['address'] }}:9000"
+          - "║ cAdvisor : http://{{ ansible_facts['default_ipv4']['address'] }}:8081"
+          - "{% endif %}"
+          - "╠══════════════════════════════════════════╣"
+          - "║ Management Commands:                     ║"
+          - "║ Status: docker compose -p {{ stack_name }} ps"
+          - "║ Logs  : docker compose -p {{ stack_name }} logs -f"
+          - "║ Stop  : docker compose -p {{ stack_name }} stop"
+          - "║ Backup: /usr/local/bin/stack-backup.sh"
+          - "╚══════════════════════════════════════════╝"
+      tags: always

@@ -1,0 +1,160 @@
+---
+# ============================================================
+# Docker Compose Deployment Playbook
+# Υποστηρίζει: fresh, update, config, rollback
+# Χρήση: -e "deploy_mode=update" -e "app_version=2.0.0"
+# ============================================================
+
+- name: Docker Compose Deployment
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    # ── Deployment mode ───────────────────────
+    deploy_mode:  "{{ deploy_mode | default('update') }}"
+    # Επιλογές: fresh, update, config, rollback
+
+    # ── App settings ──────────────────────────
+    app_name:     mywebapp
+    app_version:  "{{ app_version | default('1.0.0') }}"
+    app_env:      "{{ app_env     | default('production') }}"
+    app_port:     3000
+
+    # ── Paths ─────────────────────────────────
+    app_base_dir:   "/opt/{{ app_name }}"
+    app_config_dir: "/opt/{{ app_name }}/config"
+    app_logs_dir:   "/opt/{{ app_name }}/logs"
+
+    # ── Images ────────────────────────────────
+    nginx_image:    nginx:1.25.3-alpine
+    postgres_image: postgres:15.4-alpine
+    redis_image:    redis:7.2-alpine
+    app_image:      "nginx:1.25.3-alpine"    # ← placeholder
+
+    # ── Database ──────────────────────────────
+    postgres_db:    "{{ app_name }}_db"
+    postgres_user:  "{{ app_name }}_user"
+    postgres_port:  5432
+
+    # ── Redis ─────────────────────────────────
+    redis_port:    6379
+    redis_maxmem:  "128mb"
+
+    # ── Nginx ─────────────────────────────────
+    nginx_host_port:   80
+    nginx_rate_limit:  true
+    monitoring_enabled: false
+
+  pre_tasks:
+
+    # ── Validation ────────────────────────────
+    - name: Validate deploy_mode
+      ansible.builtin.assert:
+        that:
+          - deploy_mode in ['fresh', 'update', 'config', 'rollback']
+        fail_msg: >
+          ❌ Invalid deploy_mode: {{ deploy_mode }}
+          Valid options: fresh, update, config, rollback
+      tags: always
+
+    - name: Deployment info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Docker Compose Deployment"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Mode   : {{ deploy_mode | upper }}"
+          - "App    : {{ app_name }} v{{ app_version }}"
+          - "Env    : {{ app_env }}"
+          - "Host   : {{ inventory_hostname }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+    - name: Verify Docker
+      ansible.builtin.service_facts:
+      tags: always
+
+    - name: Assert Docker running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['docker.service'].state == 'running'
+        fail_msg: "❌ Docker is not running!"
+      tags: always
+
+  tasks:
+
+    # ════════════════════════════════════════
+    # FRESH DEPLOY
+    # ════════════════════════════════════════
+    - name: Fresh deployment
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/../roles/myapp/tasks/deploy_fresh.yml"
+      when: deploy_mode == 'fresh'
+      tags: [fresh, deploy]
+
+    # ════════════════════════════════════════
+    # UPDATE
+    # ════════════════════════════════════════
+    - name: Update deployment
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/../roles/myapp/tasks/deploy_update.yml"
+      when: deploy_mode == 'update'
+      tags: [update, deploy]
+
+    # ════════════════════════════════════════
+    # CONFIG UPDATE
+    # ════════════════════════════════════════
+    - name: Config update
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/../roles/myapp/tasks/deploy_config.yml"
+      when: deploy_mode == 'config'
+      tags: [config]
+
+    # ════════════════════════════════════════
+    # ROLLBACK
+    # ════════════════════════════════════════
+    - name: Rollback deployment
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/../roles/myapp/tasks/deploy_rollback.yml"
+      when: deploy_mode == 'rollback'
+      tags: [rollback]
+
+  post_tasks:
+
+    # ── Status report ─────────────────────────
+    - name: Get final stack status
+      ansible.builtin.command:
+        cmd: >
+          docker compose
+          -f {{ app_base_dir }}/docker-compose.yml
+          -p {{ app_name }}
+          ps
+      register:     final_status
+      changed_when: false
+      ignore_errors: true
+      tags: always
+
+    - name: Final HTTP check
+      ansible.builtin.uri:
+        url:         "http://localhost/health"
+        status_code: 200
+      register:      final_http
+      ignore_errors: true
+      tags: always
+
+    - name: Deployment Summary
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════╗"
+          - "║  DEPLOYMENT SUMMARY                  ║"
+          - "╠══════════════════════════════════════╣"
+          - "║ Mode   : {{ deploy_mode | upper }}"
+          - "║ App    : {{ app_name }} v{{ app_version }}"
+          - "║ Host   : {{ inventory_hostname }}"
+          - "║ HTTP   : {{ '✅ OK' if not final_http.failed else '❌ FAILED' }}"
+          - "╠══════════════════════════════════════╣"
+          - "║ Services:                            ║"
+          - "{{ final_status.stdout | default('N/A') }}"
+          - "╚══════════════════════════════════════╝"
+      tags: always

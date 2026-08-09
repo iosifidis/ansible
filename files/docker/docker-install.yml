@@ -1,0 +1,57 @@
+---
+# ============================================================
+# Docker Installation Playbook
+# ============================================================
+
+- name: Install Docker
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Pre-install info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Installing Docker"
+          - "Host: {{ inventory_hostname }}"
+          - "OS  : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          - "Arch: {{ ansible_facts['architecture'] }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+  roles:
+    - role: docker
+      vars:
+        docker_users:
+          - ansible
+          - "{{ ansible_user }}"
+      tags: docker
+
+  post_tasks:
+    - name: Test Docker
+      ansible.builtin.command:
+        cmd: docker run --rm hello-world
+      register:     hello_world
+      changed_when: false
+      ignore_errors: true
+      tags: verify
+
+    - name: Test Docker Compose
+      ansible.builtin.command:
+        cmd: docker compose version
+      register:     compose_version
+      changed_when: false
+      ignore_errors: true
+      tags: verify
+
+    - name: Installation Report
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "✅ DOCKER INSTALLATION COMPLETE"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Docker  : {{ '✅ OK' if not hello_world.failed else '❌ Check manually' }}"
+          - "Compose : {{ compose_version.stdout | default('❌ Not found') }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always

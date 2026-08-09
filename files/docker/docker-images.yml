@@ -1,0 +1,76 @@
+---
+# ============================================================
+# Docker Image Management Playbook
+# ============================================================
+
+- name: Docker Image Management
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    app_name:    mywebapp
+    app_version: "1.0.0"
+
+    # Images που χρειαζόμαστε
+    required_images:
+      - name:   nginx
+        tag:    "1.25.3-alpine"
+      - name:   postgres
+        tag:    "15.4-alpine"
+      - name:   redis
+        tag:    "7.2-alpine"
+
+  tasks:
+
+    # ── Pull required images ───────────────────
+    - name: Pull required images
+      community.docker.docker_image:
+        name:   "{{ item.name }}"
+        tag:    "{{ item.tag }}"
+        source: pull
+      loop: "{{ required_images }}"
+      loop_control:
+        label: "{{ item.name }}:{{ item.tag }}"
+      tags: [pull, images]
+
+    # ── Verify images ──────────────────────────
+    - name: Verify images are available
+      community.docker.docker_image_info:
+        name: "{{ required_images | map(attribute='name') | list }}"
+      register: image_check
+      tags: [verify, images]
+
+    - name: Image verification report
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Available Images"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "{% for img in image_check.images %}\
+             {{ img.RepoTags | first | default('untagged') }}: \
+             {{ (img.Size / 1048576) | round(1) }}MB\
+             {% endfor %}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: [verify, images]
+
+    # ── Prune old images ───────────────────────
+    - name: Prune dangling images
+      community.docker.docker_prune:
+        images:         true
+        images_filters:
+          dangling: true
+      tags: [cleanup, images]
+
+    # ── Docker disk usage ─────────────────────
+    - name: Show Docker disk usage
+      ansible.builtin.command:
+        cmd: docker system df
+      register:     disk_usage
+      changed_when: false
+      tags: [verify, disk]
+
+    - name: Disk usage report
+      ansible.builtin.debug:
+        msg: "{{ disk_usage.stdout_lines }}"
+      tags: [verify, disk]

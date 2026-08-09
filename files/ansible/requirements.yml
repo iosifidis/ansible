@@ -1,0 +1,32 @@
+# requirements.yml
+---
+roles:
+  - name:    geerlingguy.nginx
+    version: "3.2.0"
+  - name:    geerlingguy.docker
+    version: ">=6.0.0"
+
+collections:
+
+  # ── Core collections ──────────────────────
+  - name:    ansible.posix
+    version: ">=1.5.0"
+    source:  https://galaxy.ansible.com   # ← custom source
+
+  - name:    community.general
+    version: ">=7.0.0"
+
+  # ── Docker ────────────────────────────────
+  - name:    community.docker
+    version: ">=3.0.0"
+
+  # ── Cloud providers ───────────────────────
+  - name:    amazon.aws
+    version: ">=6.0.0"
+
+  - name:    azure.azcollection
+    version: "*"
+
+  # ── Από private Galaxy ────────────────────
+  - name:    myorg.internal_collection
+    source:  https://my-galaxy.mycompany.com

@@ -1,0 +1,239 @@
+# system-report.yml
+# Πλήρης αναφορά συστήματος χρησιμοποιώντας facts
+
+- name: System Report
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    # ══════════════════════════════════════════
+    # ΥΠΟΛΟΓΙΣΜΟΙ ΜΕ set_fact
+    # ══════════════════════════════════════════
+
+    - name: Υπολογισμός system metrics
+      ansible.builtin.set_fact:
+        # RAM calculations
+        ram_total_gb:  "{{ (ansible_facts['memtotal_mb'] / 1024) | round(2) }}"
+        ram_free_gb:   "{{ (ansible_facts['memfree_mb']  / 1024) | round(2) }}"
+        ram_used_pct:  >-
+          {{ ((ansible_facts['memtotal_mb'] - ansible_facts['memfree_mb'])
+              / ansible_facts['memtotal_mb'] * 100) | round(1) }}
+
+        # Swap calculations
+        swap_total_gb: "{{ (ansible_facts['swaptotal_mb'] / 1024) | round(2) }}"
+        swap_used_pct: >-
+          {{ ((ansible_facts['swaptotal_mb'] - ansible_facts['swapfree_mb'])
+              / ansible_facts['swaptotal_mb'] * 100
+              if ansible_facts['swaptotal_mb'] > 0
+              else 0) | round(1) }}
+
+        # Server profile
+        server_profile: >-
+          {%- if ansible_facts['memtotal_mb'] | int >= 8192 -%}
+          high_performance
+          {%- elif ansible_facts['memtotal_mb'] | int >= 4096 -%}
+          standard
+          {%- elif ansible_facts['memtotal_mb'] | int >= 2048 -%}
+          low_memory
+          {%- else -%}
+          minimal
+          {%- endif -%}
+
+        # Performance recommendations
+        nginx_workers:     "{{ ansible_facts['processor_vcpus'] | int }}"
+        php_memory_limit:  "{{ (ansible_facts['memtotal_mb'] * 0.25) | int }}M"
+        mysql_buffer_pool: "{{ (ansible_facts['memtotal_mb'] * 0.50) | int }}M"
+
+    # ── Disk calculations ─────────────────────
+    - name: Υπολογισμός disk metrics
+      ansible.builtin.set_fact:
+        root_disk_total_gb: >-
+          {{ ((ansible_facts['mounts']
+               | selectattr('mount', 'equalto', '/')
+               | map(attribute='size_total')
+               | first) / 1073741824) | round(1) }}
+        root_disk_free_gb: >-
+          {{ ((ansible_facts['mounts']
+               | selectattr('mount', 'equalto', '/')
+               | map(attribute='size_available')
+               | first) / 1073741824) | round(1) }}
+        root_disk_used_pct: >-
+          {% set total = ansible_facts['mounts']
+                         | selectattr('mount', 'equalto', '/')
+                         | map(attribute='size_total')
+                         | first %}
+          {% set avail = ansible_facts['mounts']
+                         | selectattr('mount', 'equalto', '/')
+                         | map(attribute='size_available')
+                         | first %}
+          {{ ((total - avail) / total * 100) | round(1) }}
+
+    # ══════════════════════════════════════════
+    # CUSTOM FACTS SETUP
+    # ══════════════════════════════════════════
+
+    - name: Δημιουργία facts.d directory
+      ansible.builtin.file:
+        path:  /etc/ansible/facts.d
+        state: directory
+        mode:  '0755'
+
+    - name: Deploy system report fact
+      ansible.builtin.copy:
+        dest:  /etc/ansible/facts.d/report.fact
+        mode:  '0755'
+        content: |
+          #!/bin/bash
+          # Dynamic system report fact
+
+          # Uptime
+          UPTIME_SEC=$(cat /proc/uptime | awk '{print int($1)}')
+          UPTIME_DAYS=$((UPTIME_SEC / 86400))
+
+          # Load average
+          LOAD=$(cat /proc/loadavg | awk '{print $1}')
+
+          # Running processes
+          PROCS=$(ps aux | wc -l)
+
+          # Failed services
+          FAILED=$(systemctl --failed --no-legend 2>/dev/null | wc -l)
+
+          # Last login
+          LAST=$(last -1 -R 2>/dev/null | head -1 | awk '{print $1}')
+
+          echo "{
+            \"uptime_days\":    ${UPTIME_DAYS},
+            \"uptime_seconds\": ${UPTIME_SEC},
+            \"load_average\":   \"${LOAD}\",
+            \"running_procs\":  ${PROCS},
+            \"failed_services\":${FAILED},
+            \"last_login\":     \"${LAST}\"
+          }"
+
+    - name: Refresh custom facts
+      ansible.builtin.setup:
+        filter: ansible_local
+
+    # ══════════════════════════════════════════
+    # SYSTEM REPORT
+    # ══════════════════════════════════════════
+
+    - name: Full System Report
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════╗"
+          - "║      SYSTEM REPORT                   ║"
+          - "╚══════════════════════════════════════╝"
+          - ""
+          - "── IDENTITY ────────────────────────────"
+          - "Hostname    : {{ inventory_hostname }}"
+          - "FQDN        : {{ ansible_facts['fqdn'] }}"
+          - "IP Address  : {{ ansible_facts['default_ipv4']['address'] }}"
+          - "Groups      : {{ group_names | join(', ') }}"
+          - ""
+          - "── OPERATING SYSTEM ─────────────────────"
+          - "OS          : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          - "OS Family   : {{ ansible_facts['os_family'] }}"
+          - "Kernel      : {{ ansible_facts['kernel'] }}"
+          - "Pkg Manager : {{ ansible_facts['pkg_mgr'] }}"
+          - "Init System : {{ ansible_facts['service_mgr'] }}"
+          - ""
+          - "── HARDWARE ─────────────────────────────"
+          - "Architecture: {{ ansible_facts['architecture'] }}"
+          - "vCPUs       : {{ ansible_facts['processor_vcpus'] }}"
+          - "Profile     : {{ server_profile }}"
+          - "RAM Total   : {{ ram_total_gb }}GB"
+          - "RAM Used    : {{ ram_used_pct }}%"
+          - "Swap Total  : {{ swap_total_gb }}GB"
+          - "Swap Used   : {{ swap_used_pct }}%"
+          - ""
+          - "── DISK ─────────────────────────────────"
+          - "Root Total  : {{ root_disk_total_gb }}GB"
+          - "Root Free   : {{ root_disk_free_gb }}GB"
+          - "Root Used   : {{ root_disk_used_pct }}%"
+          - "{{ '⚠️  LOW DISK SPACE!' if root_disk_used_pct | float > 80 else '✅ Disk OK' }}"
+          - ""
+          - "── RUNTIME ──────────────────────────────"
+          - "Uptime      : {{ ansible_facts['ansible_local']['report']['uptime_days'] | default('N/A') }} days"
+          - "Load Avg    : {{ ansible_facts['ansible_local']['report']['load_average'] | default('N/A') }}"
+          - "Processes   : {{ ansible_facts['ansible_local']['report']['running_procs'] | default('N/A') }}"
+          - "Failed Svcs : {{ ansible_facts['ansible_local']['report']['failed_services'] | default('N/A') }}"
+          - ""
+          - "── PERFORMANCE RECOMMENDATIONS ──────────"
+          - "Nginx workers   : {{ nginx_workers }}"
+          - "PHP memory      : {{ php_memory_limit }}"
+          - "MySQL InnoDB    : {{ mysql_buffer_pool }}"
+          - ""
+          - "── ANSIBLE ──────────────────────────────"
+          - "Ansible Ver : {{ ansible_version.full }}"
+          - "Report Date : {{ ansible_facts['date_time']['iso8601'] }}"
+          - "╚══════════════════════════════════════╝"
+
+    # ══════════════════════════════════════════
+    # ALERTS & WARNINGS
+    # ══════════════════════════════════════════
+
+    - name: ⚠️ Alert — Low disk space
+      ansible.builtin.debug:
+        msg: "ALERT: Disk usage {{ root_disk_used_pct }}% on {{ inventory_hostname }}!"
+      when: root_disk_used_pct | float > 80
+
+    - name: ⚠️ Alert — High RAM usage
+      ansible.builtin.debug:
+        msg: "ALERT: RAM usage {{ ram_used_pct }}% on {{ inventory_hostname }}!"
+      when: ram_used_pct | float > 90
+
+    - name: ⚠️ Alert — Failed services
+      ansible.builtin.debug:
+        msg: "ALERT: {{ ansible_facts['ansible_local']['report']['failed_services'] }} failed service(s)!"
+      when:
+        - ansible_facts['ansible_local']['report'] is defined
+        - ansible_facts['ansible_local']['report']['failed_services'] | int > 0
+
+    # ══════════════════════════════════════════
+    # INFRASTRUCTURE OVERVIEW (run_once)
+    # ══════════════════════════════════════════
+
+    - name: Infrastructure Overview
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════╗"
+          - "║    INFRASTRUCTURE OVERVIEW           ║"
+          - "╚══════════════════════════════════════╝"
+          - "Total managed: {{ groups['all_managed'] | length }} servers"
+          - ""
+          - "Debian based : {{ groups['debian_based'] | length }} servers"
+          - "{% for h in groups['debian_based'] %}  → {{ h }} ({{ hostvars[h]['ansible_host'] | default('N/A') }}){% endfor %}"
+          - ""
+          - "RedHat based : {{ groups['redhat_based'] | length }} servers"
+          - "{% for h in groups['redhat_based'] %}  → {{ h }} ({{ hostvars[h]['ansible_host'] | default('N/A') }}){% endfor %}"
+          - ""
+          - "openSUSE     : {{ groups['opensuse_based'] | length }} servers"
+          - "{% for h in groups['opensuse_based'] %}  → {{ h }} ({{ hostvars[h]['ansible_host'] | default('N/A') }}){% endfor %}"
+          - "╚══════════════════════════════════════╝"
+      run_once: true    # ← εκτελείται μόνο μία φορά!
+
+    # ══════════════════════════════════════════
+    # ΑΠΟΘΗΚΕΥΣΗ REPORT ΣΤΟ CONTROLLER
+    # ══════════════════════════════════════════
+
+    - name: Αποθήκευση report στο controller
+      ansible.builtin.copy:
+        dest: "/tmp/ansible_report_{{ inventory_hostname }}_{{ ansible_facts['date_time']['date'] }}.txt"
+        content: |
+          SYSTEM REPORT — {{ inventory_hostname }}
+          Generated: {{ ansible_facts['date_time']['iso8601'] }}
+          ════════════════════════════════════════
+          OS      : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+          IP      : {{ ansible_facts['default_ipv4']['address'] }}
+          CPUs    : {{ ansible_facts['processor_vcpus'] }}
+          RAM     : {{ ram_total_gb }}GB ({{ ram_used_pct }}% used)
+          Disk    : {{ root_disk_total_gb }}GB ({{ root_disk_used_pct }}% used)
+          Uptime  : {{ ansible_facts['ansible_local']['report']['uptime_days'] | default('N/A') }} days
+          Profile : {{ server_profile }}
+          ════════════════════════════════════════
+      delegate_to: localhost    # ← αποθήκευση ΣΤΟΝ CONTROLLER!
+      become: false

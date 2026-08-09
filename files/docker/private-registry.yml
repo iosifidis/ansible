@@ -1,0 +1,78 @@
+---
+# ============================================================
+# Private Docker Registry Deployment
+# ============================================================
+
+- name: Deploy Private Docker Registry
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+
+    - name: Registry deployment info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Private Docker Registry Deployment"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Host: {{ inventory_hostname }}"
+          - "IP  : {{ ansible_facts['default_ipv4']['address'] }}"
+          - "Port: {{ registry_ext_port | default(443) }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+    - name: Open firewall port (Debian/ferm)
+      ansible.builtin.lineinfile:
+        path:   /etc/ferm/ferm.conf
+        regexp: ".*{{ registry_ext_port | default(443) }}.*"
+        line:   "  proto tcp dport {{ registry_ext_port | default(443) }} ACCEPT;"
+        insertafter: "chain INPUT"
+      when:
+        - ansible_facts['os_family'] == "Debian"
+      notify: Restart ferm
+      ignore_errors: true
+
+  roles:
+    - role: registry
+      vars:
+        registry_hostname:    "{{ inventory_hostname }}"
+        registry_ext_port:    443
+        registry_auth_enabled: true
+        registry_users:
+          - username: admin
+            password: "{{ vault_registry_admin_pass }}"
+          - username: deploy
+            password: "{{ vault_registry_user_pass }}"
+        registry_ssl_self_signed: true
+        registry_gc_enabled:  true
+      tags: registry
+
+  post_tasks:
+
+    - name: Registry Access Info
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════╗"
+          - "║   REGISTRY DEPLOYMENT COMPLETE! 🎉   ║"
+          - "╠══════════════════════════════════════╣"
+          - "║ Registry URL:                        ║"
+          - "║ {{ inventory_hostname }}:443"
+          - "╠══════════════════════════════════════╣"
+          - "║ Usage:                               ║"
+          - "║ docker login {{ inventory_hostname }}"
+          - "║ docker tag myapp:1.0 {{ inventory_hostname }}/myapp:1.0"
+          - "║ docker push {{ inventory_hostname }}/myapp:1.0"
+          - "╠══════════════════════════════════════╣"
+          - "║ Note: Self-signed cert → add to      ║"
+          - "║ /etc/docker/certs.d/ on clients!     ║"
+          - "╚══════════════════════════════════════╝"
+      tags: always
+
+  handlers:
+    - name: Restart ferm
+      ansible.builtin.service:
+        name:  ferm
+        state: restarted
+      when: ansible_facts['os_family'] == "Debian"
+      ignore_errors: "{{ ansible_check_mode }}"

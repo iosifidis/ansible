@@ -1,0 +1,80 @@
+---
+# ============================================================
+# Multi-container Application Deployment
+# ============================================================
+
+- name: Deploy Multi-container Application
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+
+    - name: Pre-deployment info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Multi-container Deployment"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Host   : {{ inventory_hostname }}"
+          - "App    : {{ app_name }} v{{ app_version }}"
+          - "Env    : {{ app_env }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+    - name: Verify Docker is running
+      ansible.builtin.service_facts:
+
+    - name: Assert Docker is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['docker.service'].state == 'running'
+        fail_msg: "❌ Docker is not running!"
+      tags: always
+
+  roles:
+    - role: myapp
+      vars:
+        app_name:    mywebapp
+        app_version: "1.0.0"
+        app_env:     production
+
+  post_tasks:
+
+    - name: Verify all containers running
+      ansible.builtin.command:
+        cmd: "docker ps --filter name=mywebapp --format '{{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}'"
+      register:     containers_status
+      changed_when: false
+      tags: verify
+
+    - name: Show container status
+      ansible.builtin.debug:
+        msg: "{{ containers_status.stdout_lines }}"
+      tags: verify
+
+    - name: Verify HTTP response
+      ansible.builtin.uri:
+        url:         "http://localhost:80/health"
+        status_code: 200
+      register:      http_check
+      retries:       5
+      delay:         5
+      ignore_errors: true
+      tags: verify
+
+    - name: Deployment Report
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════╗"
+          - "║  DEPLOYMENT COMPLETE! 🎉             ║"
+          - "╠══════════════════════════════════════╣"
+          - "║ App    : mywebapp v1.0.0             ║"
+          - "║ Host   : {{ inventory_hostname }}"
+          - "║ URL    : http://{{ ansible_facts['default_ipv4']['address'] }}"
+          - "║ HTTP   : {{ '✅ OK' if not http_check.failed else '❌ Check manually' }}"
+          - "╠══════════════════════════════════════╣"
+          - "║ Containers:                          ║"
+          - "{{ containers_status.stdout_lines | join('\n') }}"
+          - "╚══════════════════════════════════════╝"
+      tags: always

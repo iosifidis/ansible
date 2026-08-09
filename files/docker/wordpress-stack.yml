@@ -1,0 +1,63 @@
+---
+# ============================================================
+# WordPress Full Stack Deployment
+# ============================================================
+
+- name: Deploy WordPress Stack
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+
+    - name: Pre-deployment info
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "WordPress Stack Deployment"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "Host  : {{ inventory_hostname }}"
+          - "IP    : {{ ansible_facts['default_ipv4']['address'] }}"
+          - "OS    : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          - "RAM   : {{ (ansible_facts['memtotal_mb'] / 1024) | round(1) }}GB"
+          - "CPUs  : {{ ansible_facts['processor_vcpus'] }}"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      tags: always
+
+    - name: Verify Docker
+      ansible.builtin.service_facts:
+
+    - name: Assert Docker running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['docker.service'].state == 'running'
+        fail_msg: "❌ Docker is not running!"
+      tags: always
+
+  roles:
+    - role: wordpress
+      vars:
+        wp_site_url:   "http://{{ ansible_facts['default_ipv4']['address'] }}"
+        wp_site_title: "My WordPress Site"
+        wp_admin_user: admin
+        app_env:       production
+      tags: wordpress
+
+  post_tasks:
+
+    - name: WordPress Access Info
+      ansible.builtin.debug:
+        msg:
+          - "╔══════════════════════════════════════════╗"
+          - "║   WORDPRESS DEPLOYMENT COMPLETE! 🎉      ║"
+          - "╠══════════════════════════════════════════╣"
+          - "║ Site URL   : http://{{ ansible_facts['default_ipv4']['address'] }}"
+          - "║ Admin URL  : http://{{ ansible_facts['default_ipv4']['address'] }}/wp-admin/"
+          - "║ Admin User : {{ wp_admin_user | default('admin') }}"
+          - "╠══════════════════════════════════════════╣"
+          - "║ Stack Commands:                          ║"
+          - "║ Status: docker compose -p wordpress ps  ║"
+          - "║ Logs  : docker compose -p wordpress logs║"
+          - "║ Stop  : docker compose -p wordpress stop║"
+          - "╚══════════════════════════════════════════╝"
+      tags: always

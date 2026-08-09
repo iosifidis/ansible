@@ -1,0 +1,27 @@
+---
+# deploy-ssh-key.yml
+# Χρήση: ansible-playbook deploy-ssh-key.yml
+#        -i "SERVER_IP," -u debian --ask-pass
+
+- name: Αποστολή SSH Key σε νέο server
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Δημιουργία .ssh directory
+      ansible.builtin.file:
+        path: /home/ansible/.ssh
+        state: directory
+        mode: '0700'
+        owner: ansible
+        group: ansible
+
+    - name: Προσθήκη public key
+      ansible.posix.authorized_key:
+        user: ansible
+        state: present
+        key: "{{ lookup('file', '/home/ansible/.ssh/id_ed25519.pub') }}"
+
+    - name: Επαλήθευση
+      ansible.builtin.debug:
+        msg: "SSH key deployed successfully!"
