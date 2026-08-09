@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Κεφάλαιο 6: Πλήρες Automation Stack & CI/CD
+title: "Κεφάλαιο 6: Πλήρες Automation Stack & CI/CD"
 sort: 6
 ---
 
