@@ -6,7 +6,7 @@ sort: 2
 
 # Docker Automation με Ansible 🐳
 
-Καλώς ήρθατε στον οδηγό **Docker Automation με Ansible**! Αυτός ο οδηγός αποτελείται από 6 κεφάλαια αφιερωμένα στη διαχείριση και αυτοματοποίηση του Docker μέσω του Ansible.
+Καλώς ήρθατε στον οδηγό **Docker Automation με Ansible**! Αυτός ο οδηγός αποτελείται από 7 κεφάλαια αφιερωμένα στη διαχείριση και αυτοματοποίηση του Docker μέσω του Ansible.
 
 ## Πίνακας Περιεχομένων
 
@@ -35,4 +35,9 @@ D5. Private Registry Management
 D6. Full Stack Deployment
     └── Web app + DB + Reverse Proxy
         με Ansible & Docker
+
+D7. Docker Networking & Volumes με Ansible
+    ├── docker_network module (bridge, overlay, macvlan)
+    ├── docker_volume module (named, NFS, tmpfs)
+    └── Backup & Restore volumes
 ```
