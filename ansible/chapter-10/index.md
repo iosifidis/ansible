@@ -1,6 +1,6 @@
 ---
 layout: default
-title:"Κεφάλαιο 10: Ansible Playbook Handlers"
+title: "Κεφάλαιο 10: Ansible Playbook Handlers"
 sort: 10
 ---
 
