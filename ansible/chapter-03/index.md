@@ -11,7 +11,7 @@ sort: 3
 ✅ ansible user με SSH key (ed25519)
 ✅ Virtual environment με Ansible 2.20.4
 ✅ Σωστή δομή φακέλων εργασίας
-✅ Managed server (nextcloudpi) έτοιμος
+✅ Managed server (nextcloud) έτοιμος
 ✅ Πρώτο real-world Security Playbook
    ├── SSH port → 2022
    ├── Root login → απενεργοποιημένο
