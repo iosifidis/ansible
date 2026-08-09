@@ -10,15 +10,15 @@ sort: 0
 
 ---
 
-## 📖 Πίνακας Περιεχομένων & Κατάσταση Πρόοδου
+## 📖 Πίνακας Περιεχομένων
 
 ### 🎯 1. Ansible Learning Path (16 Κεφάλαια)
 
 {% assign ansible_chapters = site.html_pages | where_exp: "item", "item.path contains 'ansible/chapter-'" | where_exp: "item", "item.name == 'index.md'" | sort: "path" %}
 
-| Κεφάλαιο | Κατάσταση | Σύνδεσμος |
-| :--- | :---: | :--- |
-{% for p in ansible_chapters %}{% assign is_template = p.content | contains: 'Εισάγετε εδώ' %} | **{{ p.title }}** | {% if p.completed == true or is_template == false %}✅ Ολοκληρώθηκε{% else %}📝 Πρότυπο{% endif %} | [Προβολή →]({{ p.url | relative_url }}) |
+| Κεφάλαιο | Σύνδεσμος |
+| :--- | :--- |
+{% for p in ansible_chapters %} | **{{ p.title }}** | [Προβολή →]({{ p.url | relative_url }}) |
 {% endfor %}
 
 ---
@@ -27,9 +27,9 @@ sort: 0
 
 {% assign docker_chapters = site.html_pages | where_exp: "item", "item.path contains 'docker/chapter-'" | where_exp: "item", "item.name == 'index.md'" | sort: "path" %}
 
-| Κεφάλαιο | Κατάσταση | Σύνδεσμος |
-| :--- | :---: | :--- |
-{% for p in docker_chapters %}{% assign is_template = p.content | contains: 'Εισάγετε εδώ' %} | **{{ p.title }}** | {% if p.completed == true or is_template == false %}✅ Ολοκληρώθηκε{% else %}📝 Πρότυπο{% endif %} | [Προβολή →]({{ p.url | relative_url }}) |
+| Κεφάλαιο | Σύνδεσμος |
+| :--- | :--- |
+{% for p in docker_chapters %} | **{{ p.title }}** | [Προβολή →]({{ p.url | relative_url }}) |
 {% endfor %}
 
 ---
