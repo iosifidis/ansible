@@ -1,18 +1,45 @@
 ---
 layout: default
-title: "Κεφάλαιο 6: Πλήρες Automation Stack & CI/CD"
+title: "Full Stack Deployment"
 sort: 6
 ---
 
-# Κεφάλαιο 6: Πλήρες Automation Stack & CI/CD
+# D6: Full Stack Deployment 🚀
 
-## Επισκόπηση Κεφαλαίου
-[Εισάγετε εδώ την εισαγωγή και την επισκόπηση για το Κεφάλαιο 6]
+## Τι θα φτιάξουμε
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Production Full Stack                                  │
+│                                                         │
+│  Internet :80/:443                                      │
+│       │                                                 │
+│       ▼                                                 │
+│  ┌─────────┐                                            │
+│  │  Nginx  │ ← Reverse proxy + SSL                      │
+│  └────┬────┘                                            │
+│       │                                                 │
+│  ┌────┴─────────────────┐                               │
+│  ▼                      ▼                               │
+│  ┌─────────┐    ┌──────────────┐                        │
+│  │  MyApp  │    │  Adminer     │ ← DB management        │
+│  │ (node)  │    │  (web UI)    │                        │
+│  └────┬────┘    └──────────────┘                        │
+│       │                                                 │
+│  ┌────┴──────────────┐                                  │
+│  ▼                   ▼                                  │
+│  ┌──────────┐  ┌──────────┐                             │
+│  │ Postgres │  │  Redis   │                             │
+│  └──────────┘  └──────────┘                             │
+│                                                         │
+│  Monitoring:                                            │
+│  ┌──────────┐  ┌──────────┐                             │
+│  │ cAdvisor │  │ Portainer│ ← Container management      │
+│  └──────────┘  └──────────┘                             │
+└─────────────────────────────────────────────────────────┘
+```
+
 
 ## Υποπαράγραφοι
-- [6.1 Deploy Πλήρους Production Stack](./6.1-complete-stack-deploy.md)
-- [6.2 Ενσωμάτωση σε CI/CD Pipelines](./6.2-cicd-integration.md)
+- [6.1 Full Stack Deployment](./6-complete-stack-deploy.md)
 
----
-> [!NOTE]
-> Για να επεξεργαστείτε το περιεχόμενο αυτού του κεφαλαίου, ανοίξτε τα αντίστοιχα `.md` αρχεία στον φάκελο `docker/chapter-06/`.
