@@ -3,7 +3,7 @@ layout: default
 title: "Κεφάλαιο 11: Templating με Jinja2"
 sort: 11
 ---
-
+{% raw %}
 # Κεφάλαιο 11: Templating με Jinja2 🎨
 
 ## Τι θα καλύψουμε
@@ -44,3 +44,5 @@ sort: 11
 - [11.4 Jinja2 Filters 🔧](./11.4-jinja2-filters.md)
 - [11.5 Jinja2 Control Structures 🔀](./11.5-jinja2-control-structures.md)
 - [11.6 Πρακτικά Templates 🛠️](./11.6-jinja2-practical-templates)
+{% endraw %}
+
