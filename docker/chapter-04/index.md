@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Docker Compose με Ansible"
+title: "Κεφάλαιο D4: Docker Compose με Ansible"
 sort: 4
 ---
 

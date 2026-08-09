@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Διαχείριση Images & Containers"
+title: "Κεφάλαιο D3: Διαχείριση Images & Containers"
 sort: 3
 ---
 

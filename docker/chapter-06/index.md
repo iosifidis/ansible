@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Full Stack Deployment"
+title: "Κεφάλαιο D6: Full Stack Deployment"
 sort: 6
 ---
 

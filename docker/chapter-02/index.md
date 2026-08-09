@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Εγκατάσταση Docker με Ansible"
+title: "Κεφάλαιο D2: Εγκατάσταση Docker με Ansible"
 sort: 2
 ---
 

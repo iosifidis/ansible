@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Private Registry Management"
+title: "Κεφάλαιο D5: Private Registry Management"
 sort: 5
 ---
 

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Εισαγωγή στο Docker για Ansible Users"
+title: "Κεφάλαιο D1: Εισαγωγή στο Docker για Ansible Users"
 sort: 1
 ---
 
