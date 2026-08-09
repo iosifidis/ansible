@@ -12,7 +12,7 @@ sort: 1
 
 ```
 ╔══════════════════════════════════════════════╗
-║     ANSIBLE COURSE COMPLETE! 🎉              ║
+║     ANSIBLE COURSE — IN PROGRESS 🚀          ║
 ╠══════════════════════════════════════════════╣
 ║                                              ║
 ║  ✅ Κεφ. 1  → Introduction                   ║
@@ -31,6 +31,7 @@ sort: 1
 ║  ✅ Κεφ. 14 → Tags                           ║
 ║  ✅ Κεφ. 15 → Roles                          ║
 ║  ✅ Κεφ. 16 → Ansible Galaxy                 ║
+║  ✅ Κεφ. 17 → Error Handling & Debugging     ║
 ║                                              ║
 ╠══════════════════════════════════════════════╣
 ║  ➡️  Επόμενο: Docker Automation! 🐳          ║
