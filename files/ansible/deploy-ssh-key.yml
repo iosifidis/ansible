@@ -1,4 +1,3 @@
----
 # deploy-ssh-key.yml
 # Χρήση: ansible-playbook deploy-ssh-key.yml
 #        -i "SERVER_IP," -u debian --ask-pass

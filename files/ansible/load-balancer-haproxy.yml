@@ -1,4 +1,3 @@
----
 # ============================================================
 # Load Balancer Setup Playbook
 # Architecture: HAProxy → nginx web servers

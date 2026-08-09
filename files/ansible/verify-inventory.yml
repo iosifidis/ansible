@@ -1,4 +1,3 @@
----
 # verify-inventory.yml
 # Τρέξε: ansible-playbook playbooks/verify-inventory.yml
 
