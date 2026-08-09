@@ -28,6 +28,12 @@ plugins:
   - jekyll-github-metadata
   - jekyll-gist
 
+defaults:
+  - scope:
+      path: "files"
+    values:
+      render_with_liquid: false
+
 exclude:
   - .bash
   - .github
