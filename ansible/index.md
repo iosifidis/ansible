@@ -6,15 +6,15 @@ sort: 1
 
 # Ansible Learning Path
 
-Καλώς ήρθατε στο **Ansible Learning Path**! Αυτός ο οδηγός περιλαμβάνει 16 κεφάλαια με όλες τις βασικές και προχωρημένες γνώσεις για το Ansible.
+Καλώς ήρθατε στο **Ansible Learning Path**! Αυτός ο οδηγός περιλαμβάνει 22 κεφάλαια με όλες τις βασικές και προχωρημένες γνώσεις για το Ansible.
 
 ## Πίνακας Περιεχομένων
 
 ```
 ╔══════════════════════════════════════════════╗
-║     ANSIBLE COURSE — IN PROGRESS 🚀          ║
+║     ANSIBLE COURSE COMPLETE! 🎉              ║
 ╠══════════════════════════════════════════════╣
-║                                              ║
+║  ── Βασικά ──────────────────────────────  ║
 ║  ✅ Κεφ. 1  → Introduction                   ║
 ║  ✅ Κεφ. 2  → High-Level View                ║
 ║  ✅ Κεφ. 3  → Environment Setup              ║
@@ -31,8 +31,13 @@ sort: 1
 ║  ✅ Κεφ. 14 → Tags                           ║
 ║  ✅ Κεφ. 15 → Roles                          ║
 ║  ✅ Κεφ. 16 → Ansible Galaxy                 ║
+║  ── Προχωρημένα ─────────────────────────  ║
 ║  ✅ Κεφ. 17 → Error Handling & Debugging     ║
 ║  ✅ Κεφ. 18 → Performance & Parallel Exec.  ║
+║  ✅ Κεφ. 19 → Variable Precedence            ║
+║  ✅ Κεφ. 20 → Lookups                        ║
+║  ✅ Κεφ. 21 → Essential Modules              ║
+║  ✅ Κεφ. 22 → Testing (Molecule & lint)      ║
 ║                                              ║
 ╠══════════════════════════════════════════════╣
 ║  ➡️  Επόμενο: Docker Automation! 🐳          ║
