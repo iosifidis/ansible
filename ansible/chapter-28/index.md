@@ -1,42 +1,35 @@
 ---
 layout: default
-title: "Κεφάλαιο 28: Git Workflow & GitOps"
+title: "Κεφάλαιο 28: Custom Modules & Plugins"
 sort: 28
 ---
 
-# Κεφάλαιο 28: Git Workflow & GitOps 🌿
+# Κεφάλαιο 28: Custom Modules & Plugins 🐍
 
 ## Τι θα καλύψουμε
 
 ```
-28.1 Γιατί Git για Ansible;
-     ├── Infrastructure as Code στο Git
-     └── Single Source of Truth
+28.1 Πότε χρειάζεσαι custom module
+     └── Module vs Role vs Task
 
-28.2 Repository Structure
-     ├── Mono-repo vs multi-repo
-     └── Προτεινόμενη δομή
+28.2 Ανατομία Ansible Module
+     ├── AnsibleModule class
+     ├── argument_spec
+     └── exit_json / fail_json
 
-28.3 Branching Strategy
-     ├── GitFlow vs Trunk-Based
-     └── Το μοντέλο: main + develop + feature
+28.3 Custom Filter Plugin
+     └── Jinja2 filter σε Python
 
-28.4 Environments: Testing → Staging → Production
-     ├── Πώς αντιστοιχούν branches σε environments
-     └── Προστασία production
+28.4 Custom Callback Plugin
+     └── Custom output formatting
 
-28.5 Pull Requests & Code Review
-     ├── Branch protection rules
-     └── Review workflow
-
-28.6 Πρακτικό παράδειγμα — Πλήρης GitOps Workflow
-     └── Από feature branch ως production deploy
+28.5 Πρακτικό παράδειγμα
+     └── Module για API integration
 ```
 
 ## Υποπαράγραφοι
-- [28.1 Γιατί Git για Ansible; 📚](./28.1-why-git.md)
-- [28.2 Repository Structure 📁](./28.2-repo-structure.md)
-- [28.3 Branching Strategy 🌿](./28.3-branching-strategy.md)
-- [28.4 Environments 🏗️](./28.4-environments.md)
-- [28.5 Pull Requests & Code Review 👥](./28.5-pull-requests.md)
-- [28.6 Πρακτικό παράδειγμα — Πλήρης GitOps Workflow 🚀](./28.6-gitops-workflow-example.md)
+- [28.1 Πότε χρειάζεσαι Custom Module 🤔](./28.1-when-custom-module.md)
+- [28.2 Ανατομία Ansible Module 🔬](./28.2-module-anatomy.md)
+- [28.3 Custom Filter Plugin 🔧](./28.3-filter-plugin.md)
+- [28.4 Custom Callback Plugin 📢](./28.4-callback-plugin.md)
+- [28.5 Πρακτικό παράδειγμα — API Module 🚀](./28.5-custom-module-example.md)

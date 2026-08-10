@@ -1,35 +1,37 @@
 ---
 layout: default
-title: "Κεφάλαιο 25: Custom Modules & Plugins"
+title: "Κεφάλαιο 25: Dynamic Inventory Plugins"
 sort: 25
 ---
 
-# Κεφάλαιο 25: Custom Modules & Plugins 🐍
+# Κεφάλαιο 25: Dynamic Inventory Plugins 🌐
 
 ## Τι θα καλύψουμε
 
 ```
-25.1 Πότε χρειάζεσαι custom module
-     └── Module vs Role vs Task
+25.1 Dynamic Inventory — Θεωρία
+     ├── Script vs Plugin
+     └── inventory.yml format
 
-25.2 Ανατομία Ansible Module
-     ├── AnsibleModule class
-     ├── argument_spec
-     └── exit_json / fail_json
+25.2 Netbox Plugin
+     ├── Εγκατάσταση & ρύθμιση
+     └── Filters & Groups
 
-25.3 Custom Filter Plugin
-     └── Jinja2 filter σε Python
+25.3 Cloud Providers
+     ├── AWS EC2
+     ├── Proxmox
+     └── libvirt / KVM
 
-25.4 Custom Callback Plugin
-     └── Custom output formatting
+25.4 Custom Inventory Script
+     └── Python inventory script
 
 25.5 Πρακτικό παράδειγμα
-     └── Module για API integration
+     └── Netbox-driven automation
 ```
 
 ## Υποπαράγραφοι
-- [25.1 Πότε χρειάζεσαι Custom Module 🤔](./25.1-when-custom-module.md)
-- [25.2 Ανατομία Ansible Module 🔬](./25.2-module-anatomy.md)
-- [25.3 Custom Filter Plugin 🔧](./25.3-filter-plugin.md)
-- [25.4 Custom Callback Plugin 📢](./25.4-callback-plugin.md)
-- [25.5 Πρακτικό παράδειγμα — API Module 🚀](./25.5-custom-module-example.md)
+- [25.1 Dynamic Inventory — Θεωρία 📚](./25.1-dynamic-inventory-theory.md)
+- [25.2 Netbox Plugin 🗃️](./25.2-netbox-plugin.md)
+- [25.3 Cloud Providers ☁️](./25.3-cloud-providers.md)
+- [25.4 Custom Inventory Script 🐍](./25.4-custom-inventory-script.md)
+- [25.5 Πρακτικό παράδειγμα — Netbox Automation 🚀](./25.5-netbox-automation-example.md)

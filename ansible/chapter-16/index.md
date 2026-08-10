@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Κεφάλαιο 16: Capstone Project & Επόμενα Βήματα"
+title: "Κεφάλαιο 16: Ansible Galaxy & Collections"
 sort: 16
 ---
 

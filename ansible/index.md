@@ -30,7 +30,7 @@ sort: 1
 ║  ✅ Κεφ. 13 → Runtime Facts                  ║
 ║  ✅ Κεφ. 14 → Tags                           ║
 ║  ✅ Κεφ. 15 → Roles                          ║
-║  ✅ Κεφ. 16 → Ansible Galaxy                 ║
+║  ✅ Κεφ. 16 → Ansible Galaxy & Collections   ║
 ║  ── Προχωρημένα ─────────────────────────  ║
 ║  ✅ Κεφ. 17 → Error Handling & Debugging     ║
 ║  ✅ Κεφ. 18 → Performance & Parallel Exec.  ║
@@ -38,13 +38,14 @@ sort: 1
 ║  ✅ Κεφ. 20 → Lookups                        ║
 ║  ✅ Κεφ. 21 → Essential Modules              ║
 ║  ✅ Κεφ. 22 → Testing (Molecule & lint)      ║
-║  ── Προαιρετικά ─────────────────────────  ║
-║  ✅ Κεφ. 23 → AWX & Automation Platform      ║
-║  ✅ Κεφ. 24 → Ansible Pull Mode              ║
-║  ✅ Κεφ. 25 → Custom Modules & Plugins       ║
-║  ✅ Κεφ. 26 → CI/CD Integration              ║
-║  ✅ Κεφ. 27 → Dynamic Inventory Plugins      ║
-║  ✅ Κεφ. 28 → Git Workflow & GitOps           ║
+║  ── Workflow & Operations ───────────────  ║
+║  ✅ Κεφ. 23 → Git Workflow & GitOps          ║
+║  ✅ Κεφ. 24 → CI/CD Integration              ║
+║  ✅ Κεφ. 25 → Dynamic Inventory Plugins      ║
+║  ── Εξειδικευμένα ───────────────────────  ║
+║  ✅ Κεφ. 26 → AWX & Automation Platform      ║
+║  ✅ Κεφ. 27 → Ansible Pull Mode              ║
+║  ✅ Κεφ. 28 → Custom Modules & Plugins       ║
 ║                                              ║
 ╠══════════════════════════════════════════════╣
 ║  ➡️  Επόμενο: Docker Automation! 🐳          ║
