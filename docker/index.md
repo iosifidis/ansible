@@ -6,7 +6,7 @@ sort: 2
 
 # Docker Automation με Ansible 🐳
 
-Καλώς ήρθατε στον οδηγό **Docker Automation με Ansible**! Αυτός ο οδηγός αποτελείται από 7 κεφάλαια αφιερωμένα στη διαχείριση και αυτοματοποίηση του Docker μέσω του Ansible.
+Καλώς ήρθατε στον οδηγό **Docker Automation με Ansible**! Αυτός ο οδηγός αποτελείται από 9 κεφάλαια αφιερωμένα στη διαχείριση και αυτοματοποίηση του Docker μέσω του Ansible.
 
 ## Πίνακας Περιεχομένων
 
@@ -40,4 +40,14 @@ D7. Docker Networking & Volumes με Ansible
     ├── docker_network module (bridge, overlay, macvlan)
     ├── docker_volume module (named, NFS, tmpfs)
     └── Backup & Restore volumes
+
+D8. Docker Security Hardening με Ansible
+    ├── Container runtime security
+    ├── Secrets management (Vault + file mounts)
+    └── Image scanning (Trivy)
+
+D9. Monitoring Stack με Ansible
+    ├── Prometheus + Alertmanager
+    ├── Grafana (dashboards as code)
+    └── Node Exporter + cAdvisor
 ```
