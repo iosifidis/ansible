@@ -1,0 +1,83 @@
+---
+# setup-swarm.yml
+# Δημιουργία Docker Swarm cluster με Ansible
+# Κεφ. D10.2 — Docker Swarm με Ansible
+# Χρήση: ansible-playbook playbooks/setup-swarm.yml -v
+# Inventory groups: swarm_managers, swarm_workers
+
+- name: Install Docker on all Swarm nodes
+  hosts: swarm_managers:swarm_workers
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Εγκατάσταση Docker
+      ansible.builtin.include_role:
+        name: docker_install
+
+# ─────────────────────────────────────────────────────
+- name: Initialize Swarm (primary manager)
+  hosts: "{{ groups['swarm_managers'][0] }}"
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: "🐝 Init Swarm"
+      community.docker.docker_swarm:
+        state:          present
+        advertise_addr: "{{ ansible_host }}"
+      register: swarm_info
+
+    - name: Save join tokens
+      ansible.builtin.add_host:
+        name:                swarm_primary
+        swarm_manager_token: "{{ swarm_info.swarm_facts.JoinTokens.Manager }}"
+        swarm_worker_token:  "{{ swarm_info.swarm_facts.JoinTokens.Worker }}"
+        swarm_manager_addr:  "{{ ansible_host }}:2377"
+
+# ─────────────────────────────────────────────────────
+- name: Join additional managers
+  hosts: swarm_managers[1:]
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: "🐝 Join as manager"
+      community.docker.docker_swarm:
+        state:          join
+        advertise_addr: "{{ ansible_host }}"
+        join_token:     "{{ hostvars['swarm_primary'].swarm_manager_token }}"
+        remote_addrs:
+          - "{{ hostvars['swarm_primary'].swarm_manager_addr }}"
+
+# ─────────────────────────────────────────────────────
+- name: Join workers
+  hosts: swarm_workers
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: "🐝 Join as worker"
+      community.docker.docker_swarm:
+        state:          join
+        advertise_addr: "{{ ansible_host }}"
+        join_token:     "{{ hostvars['swarm_primary'].swarm_worker_token }}"
+        remote_addrs:
+          - "{{ hostvars['swarm_primary'].swarm_manager_addr }}"
+
+# ─────────────────────────────────────────────────────
+- name: Verify Swarm cluster
+  hosts: "{{ groups['swarm_managers'][0] }}"
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Node list
+      ansible.builtin.command: docker node ls
+      register:     nodes
+      changed_when: false
+
+    - name: "📊 Cluster Status"
+      ansible.builtin.debug:
+        msg: "{{ nodes.stdout_lines }}"

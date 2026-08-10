@@ -1,0 +1,133 @@
+---
+# hardened-docker-stack.yml
+# Docker hardened production stack με security best practices
+# Κεφ. D8.6 — Docker Security Hardening
+# Χρήση: ansible-playbook playbooks/hardened-docker-stack.yml -e "new_version=2.5.0" --ask-vault-pass
+
+- name: Hardened Docker Stack
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    stack:        myapp
+    app_version:  "{{ new_version | mandatory }}"
+    secrets_dir:  "/run/secrets/{{ stack }}"
+
+    images:
+      nginx:    "nginx:1.25.3-alpine"
+      app:      "myapp:{{ app_version }}"
+      postgres: "postgres:15.4-alpine"
+
+  tasks:
+
+    # ── Secrets directory ──────────────────
+    - name: "🔐 Secrets directory"
+      ansible.builtin.file:
+        path:  "{{ secrets_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode:  '0700'
+
+    - name: "🔐 Write secrets"
+      ansible.builtin.copy:
+        content: "{{ item.value }}"
+        dest:    "{{ secrets_dir }}/{{ item.key }}"
+        owner:   root
+        mode:    '0600'
+      loop:
+        - { key: postgres_pass, value: "{{ vault_postgres_pass }}" }
+        - { key: app_secret,    value: "{{ vault_app_secret }}"    }
+      loop_control:
+        label: "{{ item.key }}"
+      no_log: true
+
+    # ── Networks ──────────────────────────
+    - name: "🌐 Frontend network"
+      community.docker.docker_network:
+        name:  "{{ stack }}_frontend"
+        state: present
+
+    - name: "🌐 Backend network (internal)"
+      community.docker.docker_network:
+        name:     "{{ stack }}_backend"
+        state:    present
+        internal: true
+
+    # ── PostgreSQL ────────────────────────
+    - name: "🐘 PostgreSQL (hardened)"
+      community.docker.docker_container:
+        name:           "{{ stack }}_postgres"
+        image:          "{{ images.postgres }}"
+        state:          started
+        restart_policy: unless-stopped
+        user:           "999:999"
+        read_only:      true
+        memory:         "512m"
+        cap_drop:       [ALL]
+        cap_add:        [CHOWN, FOWNER, SETGID, SETUID]
+        security_opts:  ["no-new-privileges:true"]
+        tmpfs:
+          /tmp:                "size=64m"
+          /var/run/postgresql: "size=16m"
+        networks:
+          - name: "{{ stack }}_backend"
+        volumes:
+          - "{{ stack }}_postgres:/var/lib/postgresql/data:rw"
+          - "{{ secrets_dir }}/postgres_pass:/run/secrets/postgres_password:ro"
+        env:
+          POSTGRES_PASSWORD_FILE: "/run/secrets/postgres_password"
+          POSTGRES_USER:          appuser
+          POSTGRES_DB:            mydb
+
+    # ── App ───────────────────────────────
+    - name: "🚀 App (hardened)"
+      community.docker.docker_container:
+        name:           "{{ stack }}_app"
+        image:          "{{ images.app }}"
+        state:          started
+        restart_policy: unless-stopped
+        user:           "1000:1000"
+        read_only:      true
+        memory:         "512m"
+        cap_drop:       [ALL]
+        security_opts:  ["no-new-privileges:true"]
+        tmpfs:
+          /tmp:       "size=64m"
+          /app/cache: "size=128m"
+        networks:
+          - name: "{{ stack }}_frontend"
+          - name: "{{ stack }}_backend"
+        volumes:
+          - "{{ secrets_dir }}/app_secret:/run/secrets/app_secret:ro"
+        env:
+          NODE_ENV:    production
+          SECRET_FILE: "/run/secrets/app_secret"
+
+    # ── Nginx ─────────────────────────────
+    - name: "🌐 Nginx (hardened)"
+      community.docker.docker_container:
+        name:           "{{ stack }}_nginx"
+        image:          "{{ images.nginx }}"
+        state:          started
+        restart_policy: unless-stopped
+        user:           "101:101"
+        read_only:      true
+        memory:         "128m"
+        cap_drop:       [ALL]
+        cap_add:        [NET_BIND_SERVICE]
+        security_opts:  ["no-new-privileges:true"]
+        tmpfs:
+          /tmp:             "size=32m"
+          /var/cache/nginx: "size=128m"
+          /var/run:         "size=16m"
+        ports:
+          - "127.0.0.1:80:80"
+          - "127.0.0.1:443:443"
+        networks:
+          - name: "{{ stack }}_frontend"
+
+    - name: "📊 Deployment complete"
+      ansible.builtin.debug:
+        msg: "✅ Hardened stack {{ stack }} v{{ app_version }} deployed on {{ inventory_hostname }}"

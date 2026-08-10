@@ -1,0 +1,71 @@
+---
+# setup-ansible-pull.yml
+# Εγκατάσταση ansible-pull με cron για self-managing hosts
+# Κεφ. 24 — Ansible Pull Mode
+# Χρήση: ansible-playbook playbooks/setup-ansible-pull.yml --limit all
+
+- name: Setup ansible-pull automation
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    pull_repo:     "https://github.com/myorg/ansible-configs.git"
+    pull_branch:   main
+    pull_interval: "*/30"    # κάθε 30 λεπτά
+    pull_user:     root
+
+  tasks:
+
+    - name: Εγκατάσταση ansible
+      ansible.builtin.package:
+        name:  ansible
+        state: present
+
+    - name: Git deploy key
+      ansible.builtin.copy:
+        src:   files/deploy_key
+        dest:  /etc/ansible/deploy_key
+        owner: root
+        mode:  '0600'
+      when: use_deploy_key | default(false)
+
+    - name: ansible-pull directory
+      ansible.builtin.file:
+        path:  /etc/ansible
+        state: directory
+        mode:  '0755'
+
+    - name: ansible-pull cron job
+      ansible.builtin.cron:
+        name:    "ansible-pull"
+        minute:  "{{ pull_interval }}"
+        hour:    "*"
+        job:     >
+          /usr/bin/ansible-pull
+          --url {{ pull_repo }}
+          --branch {{ pull_branch }}
+          --only-if-changed
+          local.yml
+          >> /var/log/ansible-pull.log 2>&1
+        user:    "{{ pull_user }}"
+
+    - name: Log rotation for ansible-pull
+      ansible.builtin.copy:
+        dest:  /etc/logrotate.d/ansible-pull
+        mode:  '0644'
+        content: |
+          /var/log/ansible-pull.log {
+              daily
+              rotate 7
+              compress
+              missingok
+              notifempty
+          }
+
+    - name: "✅ ansible-pull configured"
+      ansible.builtin.debug:
+        msg:
+          - "ansible-pull ρυθμίστηκε στον {{ inventory_hostname }}"
+          - "Repo: {{ pull_repo }}"
+          - "Schedule: {{ pull_interval }} * * * *"

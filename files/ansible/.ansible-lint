@@ -1,0 +1,33 @@
+# .ansible-lint configuration
+# Αναφέρεται στο Κεφ. 22 — Testing με Molecule & ansible-lint
+# Τοποθέτησε αυτό στο root του project
+
+profile: production    # conservative / basic / moderate / safety / shared / production
+
+# Κανόνες που εξαιρούνται
+warn_list:
+  - yaml[line-length]    # μεγάλες γραμμές σε docs
+
+skip_list:
+  - role-name            # δεν εφαρμόζουμε Galaxy naming για private roles
+
+# Paths που εξαιρούνται
+exclude_paths:
+  - .git/
+  - .molecule/
+  - files/
+  - "**/.cache"
+
+# Συγκεκριμένοι κανόνες
+enable_list:
+  - no-changed-when      # ✅ enforce no-changed-when σε command/shell
+  - no-free-form         # ✅ prefer YAML syntax over free-form
+  - partial-become       # ✅ flag partial become usage
+
+# Παρακολούθηση μόνο .yml playbooks
+kinds:
+  - playbook: "**/playbooks/*.yml"
+  - tasks: "**/tasks/*.yml"
+  - vars: "**/vars/*.yml"
+  - meta: "**/meta/main.yml"
+  - role: roles/*

@@ -1,0 +1,161 @@
+---
+# GitHub Actions CI/CD Pipeline για Ansible
+# Αρχείο: .github/workflows/ansible-cd.yml
+# Κεφ. 26.2 — CI/CD Integration
+# Αντίγραψε σε: <project>/.github/workflows/ansible-cd.yml
+
+name: Ansible CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PY_COLORS:           "1"
+  ANSIBLE_FORCE_COLOR: "1"
+
+jobs:
+
+  # ── Stage 1: Lint ─────────────────────────────────
+  lint:
+    name: ansible-lint
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install ansible ansible-lint
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+  # ── Stage 2: Molecule Tests ───────────────────────
+  molecule:
+    name: "Molecule: ${{ matrix.role }}"
+    runs-on: ubuntu-latest
+    needs: lint
+
+    strategy:
+      matrix:
+        role:
+          - nginx
+          - docker
+      fail-fast: false
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install ansible molecule molecule-plugins[docker] ansible-lint
+
+      - name: Run Molecule
+        run: molecule test
+        working-directory: roles/${{ matrix.role }}
+
+  # ── Stage 3: Deploy Staging ───────────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    runs-on: ubuntu-latest
+    needs: molecule
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Setup Vault
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
+
+      - name: Install Ansible
+        run: |
+          pip install ansible
+          ansible-galaxy install -r requirements.yml
+
+      - name: Deploy to Staging
+        run: |
+          ansible-playbook playbooks/deploy.yml \
+            --limit staging \
+            --vault-password-file .vault_pass \
+            -e "app_version=${{ github.sha }}"
+
+      - name: Notify Slack
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          ICON=$([ "$STATUS" = "success" ] && echo "✅" || echo "❌")
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"$ICON Staging: ${STATUS} (${{ github.sha }}:~:text=short)\"}"
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f .vault_pass ~/.ssh/id_ed25519
+
+  # ── Stage 4: Deploy Production ────────────────────
+  deploy-production:
+    name: Deploy → Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production    # ← Requires manual approval
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.PRODUCTION_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Setup Vault
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
+
+      - name: Install Ansible
+        run: |
+          pip install ansible
+          ansible-galaxy install -r requirements.yml
+
+      - name: Deploy to Production
+        run: |
+          ansible-playbook playbooks/deploy.yml \
+            --limit production \
+            --vault-password-file .vault_pass \
+            -e "app_version=${{ github.sha }}"
+
+      - name: Notify Slack
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          ICON=$([ "$STATUS" = "success" ] && echo "✅" || echo "❌")
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"$ICON Production: ${STATUS} (${{ github.sha }})\"}"
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f .vault_pass ~/.ssh/id_ed25519

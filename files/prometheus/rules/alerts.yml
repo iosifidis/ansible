@@ -1,0 +1,83 @@
+# Alert rules για Prometheus
+# Αρχείο: files/prometheus/rules/alerts.yml
+# Αναφέρεται στο Κεφ. D9.3
+
+groups:
+
+  - name: host.rules
+    rules:
+
+      - alert: HostDown
+        expr:  up == 0
+        for:   2m
+        labels:
+          severity: critical
+        annotations:
+          summary:     "Host {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} δεν απαντά για > 2 λεπτά"
+
+      - alert: HighCPU
+        expr:  100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for:   5m
+        labels:
+          severity: warning
+        annotations:
+          summary:     "High CPU: {{ $labels.instance }}"
+          description: "CPU > 85% για {{ $value | humanize }}%"
+
+      - alert: HighMemory
+        expr:  (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for:   5m
+        labels:
+          severity: critical
+        annotations:
+          summary:     "High Memory: {{ $labels.instance }}"
+          description: "Memory > 90% ({{ $value | humanize }}%)"
+
+      - alert: DiskSpaceLow
+        expr:  (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 85
+        for:   10m
+        labels:
+          severity: warning
+        annotations:
+          summary:     "Disk Low: {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} > 85% ({{ $value | humanize }}%)"
+
+      - alert: DiskSpaceCritical
+        expr:  (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 95
+        for:   5m
+        labels:
+          severity: critical
+        annotations:
+          summary:     "Disk Critical: {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} > 95%"
+
+  - name: docker.rules
+    rules:
+
+      - alert: ContainerDown
+        expr:  absent(container_last_seen{name!=""})
+        for:   2m
+        labels:
+          severity: critical
+        annotations:
+          summary:     "Container down: {{ $labels.name }}"
+          description: "Container {{ $labels.name }} δεν φαίνεται για > 2 λεπτά"
+
+      - alert: ContainerHighMemory
+        expr:  (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 90
+        for:   5m
+        labels:
+          severity: warning
+        annotations:
+          summary:     "Container memory high: {{ $labels.name }}"
+          description: "{{ $labels.name }}: {{ $value | humanize }}% memory used"
+
+      - alert: ContainerRestarting
+        expr:  rate(container_last_seen{name!=""}[15m]) > 0.2
+        for:   5m
+        labels:
+          severity: warning
+        annotations:
+          summary:     "Container restarting: {{ $labels.name }}"
+          description: "{{ $labels.name }} επανεκκινείται συχνά"

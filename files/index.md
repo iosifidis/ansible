@@ -41,3 +41,32 @@ sort: 3
 ## 💡 Πώς λειτουργεί η αυτόματη προσθήκη
 Απλώς τοποθετήστε οποιοδήποτε αρχείο (π.χ. `.yml`, `.sh`, `.zip`, `.pdf`, `.png`) στον φάκελο `files/ansible/` ή `files/docker/`.
 Το σύστημα εντοπίζει **αυτόματα** όλα τα νέα αρχεία και δημιουργεί τους συνδέσμους λήψης χωρίς να χρειάζεται να κάνετε καμία χειροκίνητη αλλαγή στη σελίδα!
+
+---
+
+## 📊 Prometheus Alert Rules (`files/prometheus/rules/`)
+
+{% assign prometheus_files = site.static_files | where_exp: "item", "item.path contains '/files/prometheus/'" %}
+
+{% if prometheus_files.size > 0 %}
+{% for file in prometheus_files %}
+- [📥 **{{ file.name }}**]({{ file.path | relative_url }})
+{% endfor %}
+{% else %}
+*Δεν υπάρχουν ακόμα αρχεία στον φάκελο `files/prometheus/`.*
+{% endif %}
+
+---
+
+## 🔄 CI/CD Workflows (`files/ansible/.github/`)
+
+{% assign workflow_files = site.static_files | where_exp: "item", "item.path contains '/files/ansible/.github/'" %}
+
+{% if workflow_files.size > 0 %}
+{% for file in workflow_files %}
+- [📥 **{{ file.name }}**]({{ file.path | relative_url }})
+{% endfor %}
+{% else %}
+*Δεν υπάρχουν ακόμα αρχεία στον φάκελο `files/ansible/.github/`.*
+{% endif %}
+

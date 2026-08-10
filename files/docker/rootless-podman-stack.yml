@@ -1,0 +1,165 @@
+---
+# rootless-podman-stack.yml
+# Rootless Podman stack με systemd Quadlets
+# Κεφ. D11.6 — Podman ως Docker Alternative
+# Χρήση: ansible-playbook playbooks/rootless-podman-stack.yml -e "new_version=2.5.0" --ask-vault-pass
+
+- name: Rootless Podman Stack
+  hosts: "{{ target | default('all_managed') }}"
+  become: true
+  gather_facts: true
+
+  vars:
+    podman_user:  appuser
+    podman_uid:   1000
+    app_version:  "{{ new_version | mandatory }}"
+    quadlet_dir:  "/home/{{ podman_user }}/.config/containers/systemd"
+    secrets_dir:  "/home/{{ podman_user }}/.secrets"
+
+  tasks:
+
+    - name: "📦 Install Podman"
+      ansible.builtin.package:
+        name:
+          - podman
+          - slirp4netns
+          - fuse-overlayfs
+        state: present
+
+    - name: "👤 Create appuser"
+      ansible.builtin.user:
+        name:  "{{ podman_user }}"
+        uid:   "{{ podman_uid }}"
+        shell: /bin/bash
+        state: present
+
+    - name: "🔑 Enable lingering"
+      ansible.builtin.command:
+        cmd: "loginctl enable-linger {{ podman_user }}"
+      changed_when: true
+
+    - name: "📁 Directories"
+      ansible.builtin.file:
+        path:  "{{ item }}"
+        state: directory
+        owner: "{{ podman_user }}"
+        mode:  '0700'
+      loop:
+        - "{{ quadlet_dir }}"
+        - "{{ secrets_dir }}"
+
+    - name: "🔐 Secrets"
+      ansible.builtin.copy:
+        content: "{{ item.value }}"
+        dest:    "{{ secrets_dir }}/{{ item.key }}"
+        owner:   "{{ podman_user }}"
+        mode:    '0600'
+      loop:
+        - { key: pg_password, value: "{{ vault_postgres_pass }}" }
+        - { key: app_secret,  value: "{{ vault_app_secret }}"    }
+      loop_control:
+        label: "{{ item.key }}"
+      no_log: true
+
+    - name: "⚙️ Network quadlet"
+      ansible.builtin.copy:
+        dest:  "{{ quadlet_dir }}/myapp.network"
+        owner: "{{ podman_user }}"
+        mode:  '0644'
+        content: |
+          [Network]
+          Internal=false
+          DNS=true
+      notify: Reload user systemd
+
+    - name: "⚙️ Volume quadlet"
+      ansible.builtin.copy:
+        dest:  "{{ quadlet_dir }}/postgres_data.volume"
+        owner: "{{ podman_user }}"
+        mode:  '0644'
+        content: |
+          [Volume]
+          Label=app=myapp
+      notify: Reload user systemd
+
+    - name: "⚙️ PostgreSQL quadlet"
+      ansible.builtin.copy:
+        dest:  "{{ quadlet_dir }}/postgres.container"
+        owner: "{{ podman_user }}"
+        mode:  '0644'
+        content: |
+          [Unit]
+          Description=PostgreSQL Database
+          After=network-online.target
+
+          [Container]
+          Image=postgres:15-alpine
+          Network=myapp.network
+          Volume=postgres_data.volume:/var/lib/postgresql/data:Z
+          Environment=POSTGRES_PASSWORD_FILE=/run/secrets/pg_password
+          Environment=POSTGRES_USER=appuser
+          Environment=POSTGRES_DB=mydb
+          Secret={{ secrets_dir }}/pg_password,type=bind,target=/run/secrets/pg_password
+          ReadOnly=true
+          Tmpfs=/tmp:size=64m
+          Tmpfs=/var/run/postgresql:size=16m
+
+          [Service]
+          Restart=always
+
+          [Install]
+          WantedBy=default.target
+      notify: Reload user systemd
+
+    - name: "⚙️ Nginx quadlet"
+      ansible.builtin.copy:
+        dest:  "{{ quadlet_dir }}/nginx.container"
+        owner: "{{ podman_user }}"
+        mode:  '0644'
+        content: |
+          [Unit]
+          Description=Nginx
+          After=network-online.target
+
+          [Container]
+          Image=nginx:1.25-alpine
+          Network=myapp.network
+          PublishPort=8080:80
+          ReadOnly=true
+          Tmpfs=/tmp:size=32m
+          Tmpfs=/var/cache/nginx:size=128m
+          Tmpfs=/var/run:size=16m
+
+          [Service]
+          Restart=always
+
+          [Install]
+          WantedBy=default.target
+      notify: Reload user systemd
+
+    - name: "▶️ Start services"
+      ansible.builtin.systemd:
+        name:    "{{ item }}"
+        state:   started
+        enabled: true
+        scope:   user
+      loop:
+        - postgres
+        - nginx
+      become:      true
+      become_user: "{{ podman_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ podman_uid }}"
+
+    - name: "📊 Stack deployed"
+      ansible.builtin.debug:
+        msg: "✅ Rootless Podman stack deployed on {{ inventory_hostname }} (user: {{ podman_user }})"
+
+  handlers:
+    - name: Reload user systemd
+      ansible.builtin.command:
+        cmd: "systemctl --user daemon-reload"
+      become:      true
+      become_user: "{{ podman_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ podman_uid }}"

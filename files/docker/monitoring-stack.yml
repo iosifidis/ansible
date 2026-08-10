@@ -1,0 +1,175 @@
+---
+# monitoring-stack.yml
+# Full Monitoring Stack: Prometheus + Grafana + Alertmanager + Exporters
+# Κεφ. D9.6 — Monitoring Stack με Ansible
+# Χρήση: ansible-playbook playbooks/monitoring-stack.yml --ask-vault-pass
+
+# ── Phase 1: Exporters σε όλους τους managed hosts ──
+- name: Deploy Monitoring Exporters
+  hosts: all_managed
+  become: true
+  gather_facts: false
+
+  vars:
+    node_exporter_version: "v1.7.0"
+    cadvisor_version:      "v0.49.0"
+
+  tasks:
+
+    - name: "📡 Node Exporter"
+      community.docker.docker_container:
+        name:           node_exporter
+        image:          "prom/node-exporter:{{ node_exporter_version }}"
+        state:          started
+        restart_policy: unless-stopped
+        network_mode:   host
+        pid_mode:       host
+        user:           "65534:65534"
+        read_only:      true
+        security_opts:  ["no-new-privileges:true"]
+        cap_drop:       [ALL]
+        volumes:
+          - "/:/host:ro,rslave"
+        command:
+          - "--path.rootfs=/host"
+          - "--web.listen-address=:9100"
+
+    - name: "📊 cAdvisor"
+      community.docker.docker_container:
+        name:           cadvisor
+        image:          "gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}"
+        state:          started
+        restart_policy: unless-stopped
+        privileged:     true
+        ports:
+          - "127.0.0.1:8080:8080"
+        volumes:
+          - "/:/rootfs:ro"
+          - "/var/run:/var/run:ro"
+          - "/sys:/sys:ro"
+          - "/var/lib/docker/:/var/lib/docker:ro"
+
+# ── Phase 2: Monitoring server ──────────────────────
+- name: Deploy Monitoring Server
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  vars:
+    prometheus_version:   "v2.49.0"
+    grafana_version:      "10.3.0"
+    alertmanager_version: "v0.26.0"
+
+  tasks:
+
+    - name: "📁 Directories"
+      ansible.builtin.file:
+        path:  "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        mode:  "{{ item.mode | default('0755') }}"
+      loop:
+        - { path: /etc/prometheus,                       owner: "65534" }
+        - { path: /etc/prometheus/rules,                 owner: "65534" }
+        - { path: /etc/alertmanager,                     owner: "65534", mode: "0700" }
+        - { path: /etc/grafana/provisioning/datasources, owner: "472"  }
+        - { path: /etc/grafana/provisioning/dashboards,  owner: "472"  }
+        - { path: /var/lib/grafana/dashboards,           owner: "472"  }
+
+    - name: "🌐 Monitoring network"
+      community.docker.docker_network:
+        name:  monitoring_net
+        state: present
+
+    - name: "💾 Data volumes"
+      community.docker.docker_volume:
+        name:  "{{ item }}"
+        state: present
+      loop:
+        - prometheus_data
+        - grafana_data
+        - alertmanager_data
+
+    - name: "🔥 Prometheus"
+      community.docker.docker_container:
+        name:           prometheus
+        image:          "prom/prometheus:{{ prometheus_version }}"
+        state:          started
+        restart_policy: unless-stopped
+        user:           "65534:65534"
+        read_only:      true
+        memory:         "1g"
+        cap_drop:       [ALL]
+        security_opts:  ["no-new-privileges:true"]
+        tmpfs:
+          /tmp: "size=64m"
+        ports:
+          - "127.0.0.1:9090:9090"
+        volumes:
+          - "/etc/prometheus:/etc/prometheus:ro"
+          - "prometheus_data:/prometheus:rw"
+        command:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+          - "--storage.tsdb.retention.time=30d"
+          - "--web.enable-lifecycle"
+        networks:
+          - name: monitoring_net
+
+    - name: "🔔 Alertmanager"
+      community.docker.docker_container:
+        name:           alertmanager
+        image:          "prom/alertmanager:{{ alertmanager_version }}"
+        state:          started
+        restart_policy: unless-stopped
+        user:           "65534:65534"
+        read_only:      true
+        memory:         "128m"
+        cap_drop:       [ALL]
+        security_opts:  ["no-new-privileges:true"]
+        tmpfs:
+          /tmp: "size=32m"
+        ports:
+          - "127.0.0.1:9093:9093"
+        volumes:
+          - "/etc/alertmanager:/etc/alertmanager:ro"
+          - "alertmanager_data:/alertmanager:rw"
+        command:
+          - "--config.file=/etc/alertmanager/alertmanager.yml"
+          - "--storage.path=/alertmanager"
+        networks:
+          - name: monitoring_net
+
+    - name: "📈 Grafana"
+      community.docker.docker_container:
+        name:           grafana
+        image:          "grafana/grafana:{{ grafana_version }}"
+        state:          started
+        restart_policy: unless-stopped
+        user:           "472:472"
+        read_only:      true
+        memory:         "512m"
+        cap_drop:       [ALL]
+        security_opts:  ["no-new-privileges:true"]
+        tmpfs:
+          /tmp: "size=64m"
+        ports:
+          - "127.0.0.1:3000:3000"
+        env:
+          GF_SECURITY_ADMIN_PASSWORD: "{{ vault_grafana_pass }}"
+          GF_USERS_ALLOW_SIGN_UP:     "false"
+          GF_AUTH_ANONYMOUS_ENABLED:  "false"
+        volumes:
+          - "grafana_data:/var/lib/grafana:rw"
+          - "/etc/grafana/provisioning:/etc/grafana/provisioning:ro"
+          - "/var/lib/grafana/dashboards:/var/lib/grafana/dashboards:ro"
+        networks:
+          - name: monitoring_net
+        no_log: true
+
+    - name: "📊 Monitoring Stack Ready"
+      ansible.builtin.debug:
+        msg:
+          - "✅ Monitoring Stack deployed!"
+          - "   Prometheus:    http://localhost:9090"
+          - "   Alertmanager:  http://localhost:9093"
+          - "   Grafana:       http://localhost:3000"
