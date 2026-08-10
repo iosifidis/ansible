@@ -6,7 +6,7 @@ sort: 1
 
 # Ansible Learning Path
 
-Καλώς ήρθατε στο **Ansible Learning Path**! Αυτός ο οδηγός περιλαμβάνει 22 κεφάλαια με όλες τις βασικές και προχωρημένες γνώσεις για το Ansible.
+Καλώς ήρθατε στο **Ansible Learning Path**! Αυτός ο οδηγός περιλαμβάνει 27 κεφάλαια με όλες τις βασικές, προχωρημένες και προαιρετικές γνώσεις για το Ansible.
 
 ## Πίνακας Περιεχομένων
 
@@ -38,6 +38,12 @@ sort: 1
 ║  ✅ Κεφ. 20 → Lookups                        ║
 ║  ✅ Κεφ. 21 → Essential Modules              ║
 ║  ✅ Κεφ. 22 → Testing (Molecule & lint)      ║
+║  ── Προαιρετικά ─────────────────────────  ║
+║  ✅ Κεφ. 23 → AWX & Automation Platform      ║
+║  ✅ Κεφ. 24 → Ansible Pull Mode              ║
+║  ✅ Κεφ. 25 → Custom Modules & Plugins       ║
+║  ✅ Κεφ. 26 → CI/CD Integration              ║
+║  ✅ Κεφ. 27 → Dynamic Inventory Plugins      ║
 ║                                              ║
 ╠══════════════════════════════════════════════╣
 ║  ➡️  Επόμενο: Docker Automation! 🐳          ║
