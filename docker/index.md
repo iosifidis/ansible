@@ -6,7 +6,7 @@ sort: 2
 
 # Docker Automation με Ansible 🐳
 
-Καλώς ήρθατε στον οδηγό **Docker Automation με Ansible**! Αυτός ο οδηγός αποτελείται από 9 κεφάλαια αφιερωμένα στη διαχείριση και αυτοματοποίηση του Docker μέσω του Ansible.
+Καλώς ήρθατε στον οδηγό **Docker Automation με Ansible**! Αυτός ο οδηγός αποτελείται από 11 κεφάλαια αφιερωμένα στη διαχείριση και αυτοματοποίηση του Docker μέσω του Ansible.
 
 ## Πίνακας Περιεχομένων
 
@@ -50,4 +50,13 @@ D9. Monitoring Stack με Ansible
     ├── Prometheus + Alertmanager
     ├── Grafana (dashboards as code)
     └── Node Exporter + cAdvisor
+D10. Docker Swarm με Ansible 🐝
+    ├── Swarm cluster setup (managers + workers)
+    ├── Services, Stacks, Rolling updates
+    └── Swarm Secrets & Configs
+
+D11. Podman ως Docker Alternative 🦭
+    ├── Rootless + daemonless containers
+    ├── containers.podman collection
+    └── Quadlets (systemd integration)
 ```
